@@ -2,12 +2,14 @@ package io.github.aurelia.nlauncher
 
 import android.app.Activity
 import android.app.WallpaperManager
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.text.format.DateFormat
+import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -17,6 +19,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import android.window.OnBackInvokedDispatcher
 import java.util.Date
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -113,15 +116,20 @@ class LauncherActivity : Activity() {
             }
         })
 
-        // Only touches that no child (a favorite) consumed reach the root.
+        // Only touches that no child (a favorite) consumed reach the root. Gestures
+        // belong to the plain home screen, so they stay dormant while editing.
         root.setOnTouchListener { _, event ->
-            gestures.onTouchEvent(event)
+            if (!editMode) gestures.onTouchEvent(event)
             true
         }
 
         applyWindowInsets()
+        registerBackCallback()
 
         setEditMode(intent.getBooleanExtra(EXTRA_EDIT_MODE, false))
+        // The edit flag is a one-shot instruction, not activity state: drop it so a
+        // later recreation does not silently drop back into edit mode.
+        intent.removeExtra(EXTRA_EDIT_MODE)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -134,6 +142,7 @@ class LauncherActivity : Activity() {
             return
         }
         setEditMode(intent.getBooleanExtra(EXTRA_EDIT_MODE, false))
+        intent.removeExtra(EXTRA_EDIT_MODE)
     }
 
     override fun onResume() {
@@ -154,12 +163,29 @@ class LauncherActivity : Activity() {
         clock.text = DateFormat.getTimeFormat(this).format(Date())
     }
 
-    @Suppress("DEPRECATION")
+    /** Back leaves edit mode first, then behaves like the platform default. */
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
+        handleBack()
+    }
+
+    /**
+     * Android 13+ routes predictive back through [OnBackInvokedDispatcher], not
+     * [onBackPressed], so register a callback there as well.
+     */
+    private fun registerBackCallback() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+            ) { handleBack() }
+        }
+    }
+
+    private fun handleBack() {
         if (editMode) {
             setEditMode(false)
         } else {
-            super.onBackPressed()
+            finish()
         }
     }
 
@@ -309,7 +335,9 @@ class LauncherActivity : Activity() {
         var to = 0
         for (i in favorites.indices) {
             if (i == from) continue
-            val other = favoritesContainer.getChildAt(i + 1)
+            // Rows are laid out as [add] + favorites; skip anything unexpected
+            // rather than letting a missing child crash the drag.
+            val other = favoritesContainer.getChildAt(i + 1) ?: continue
             if (center > other.top + other.height / 2f) to++
         }
 
@@ -359,8 +387,10 @@ class LauncherActivity : Activity() {
     private fun launch(intent: Intent) {
         try {
             startActivity(intent)
-        } catch (_: Exception) {
-            // Keep the home screen responsive even if the target is unavailable.
+        } catch (e: ActivityNotFoundException) {
+            Log.w(TAG, "No activity to handle $intent", e)
+        } catch (e: SecurityException) {
+            Log.w(TAG, "Not allowed to launch $intent", e)
         }
     }
 
@@ -380,8 +410,9 @@ class LauncherActivity : Activity() {
                 0,
                 null,
             )
-        } catch (_: Exception) {
-            // No live wallpaper is listening; nothing to do.
+        } catch (e: Exception) {
+            // No live wallpaper is listening; nothing to do, but keep the reason.
+            Log.d(TAG, "Wallpaper command failed", e)
         }
     }
 
@@ -421,6 +452,7 @@ class LauncherActivity : Activity() {
     companion object {
         const val EXTRA_EDIT_MODE = "io.github.aurelia.nlauncher.extra.EDIT_MODE"
 
+        private const val TAG = "nLauncher"
         private const val CLOCK_TICK_MS = 60_000L
     }
 }

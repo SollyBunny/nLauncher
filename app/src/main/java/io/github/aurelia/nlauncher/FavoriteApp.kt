@@ -26,6 +26,7 @@ class FavoriteApp(val intent: Intent) {
 /** A [FavoriteApp] with its icon and label already loaded. */
 class ResolvedFavorite(
     val intent: Intent,
-    val icon: Drawable,
+    /** Null when the package manager has no icon to offer at all. */
+    val icon: Drawable?,
     val label: CharSequence,
 )

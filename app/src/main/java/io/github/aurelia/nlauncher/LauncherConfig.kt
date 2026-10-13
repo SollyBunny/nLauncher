@@ -58,6 +58,11 @@ object LauncherConfig {
 
     private fun defaultFavorites() = listOf(FavoriteApp(Intent(Settings.ACTION_SETTINGS)))
 
+    /**
+     * The stored favorites, in order. An absent preference means "never configured",
+     * so the default (system Settings) is used; a preference that is present but
+     * empty means the user deliberately removed every favorite.
+     */
     fun favorites(context: Context): List<FavoriteApp> {
         val raw = prefs(context).getString(KEY_FAVORITES, null) ?: return defaultFavorites()
         return raw.split('\n')

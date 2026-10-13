@@ -2,20 +2,24 @@ package io.github.aurelia.nlauncher
 
 import android.app.Activity
 import android.app.Dialog
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.AbsListView
 import android.widget.BaseAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
@@ -34,17 +38,34 @@ object AppPicker {
 
     private class AppEntry(val label: String, val icon: Drawable, val intent: Intent)
 
-    /** The picker currently on screen, if any, so it can be dismissed on demand. */
-    private var current: Dialog? = null
+    // The app list (labels, icons and intents) is built once and kept in memory for
+    // the life of the process. Callers never see this field: they ask for the list
+    // through [apps], which loads it on first use and refreshes it on package changes.
+    private var cachedApps: List<AppEntry>? = null
+    private var watchingPackages = false
 
-    fun show(activity: Activity, onPicked: (Intent) -> Unit, onDismiss: () -> Unit = {}) {
-        val pm = activity.packageManager
+    // At most one picker is on screen at a time; it is tracked so callers can close
+    // it without holding their own reference.
+    private var currentDialog: Dialog? = null
+
+    /** Dismiss the picker if one is showing. Safe to call when none is. */
+    fun dismiss() {
+        currentDialog?.dismiss()
+    }
+
+    /**
+     * The launchable apps, in label order. Resolves and caches the list on first
+     * use; whether the result came from the cache is an implementation detail.
+     */
+    private fun apps(context: Context): List<AppEntry> {
+        cachedApps?.let { return it }
+        val pm = context.packageManager
         val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val apps = pm.queryIntentActivities(main, 0)
+        val loaded = pm.queryIntentActivities(main, 0)
             .asSequence()
             .map { it.activityInfo }
             // Keep the launcher's own home activity out of the picker list.
-            .filter { it.packageName != activity.packageName }
+            .filter { it.packageName != context.packageName }
             .distinctBy { it.packageName to it.name }
             .map {
                 AppEntry(
@@ -57,8 +78,38 @@ object AppPicker {
             }
             .sortedBy { it.label.lowercase() }
             .toList()
+        cachedApps = loaded
+        watchPackages(context.applicationContext)
+        return loaded
+    }
 
-        if (apps.isEmpty()) {
+    /** Invalidate the cached app list when apps are installed, removed or changed. */
+    private fun watchPackages(context: Context) {
+        if (watchingPackages) return
+        watchingPackages = true
+        val filter = IntentFilter().apply {
+            addAction(Intent.ACTION_PACKAGE_ADDED)
+            addAction(Intent.ACTION_PACKAGE_REMOVED)
+            addAction(Intent.ACTION_PACKAGE_CHANGED)
+            addAction(Intent.ACTION_PACKAGE_REPLACED)
+            addDataScheme("package")
+        }
+        val receiver = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                cachedApps = null
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
+    }
+
+    fun show(activity: Activity, onPicked: (Intent) -> Unit, onDismiss: () -> Unit = {}) {
+        val appList = apps(activity)
+
+        if (appList.isEmpty()) {
             Toast.makeText(activity, R.string.no_apps, Toast.LENGTH_SHORT).show()
             onDismiss()
             return
@@ -66,6 +117,7 @@ object AppPicker {
 
         val dialog = Dialog(activity, R.style.Theme_Mlauncherish_Search)
         dialog.setContentView(R.layout.dialog_app_search)
+        currentDialog = dialog
         dialog.window?.let { window ->
             window.setLayout(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -78,7 +130,9 @@ object AppPicker {
 
         val searchInput = dialog.findViewById<EditText>(R.id.search_input)
         val listContainer = dialog.findViewById<FrameLayout>(R.id.list_container)
-        val adapter = Adapter(activity, apps) { entry ->
+        // Keep the results clear of the navigation bar.
+        listContainer.setPaddingRelative(0, 0, 0, navigationBarHeight(activity))
+        val adapter = Adapter(activity, appList) { entry ->
             dialog.dismiss()
             onPicked(entry.intent)
         }
@@ -86,10 +140,10 @@ object AppPicker {
         // Keep the search bar clear of the status bar. Applied to the whole bar
         // (icon + input) so they move down together.
         val searchBar = dialog.findViewById<View>(R.id.search_bar)
-        searchBar.setPadding(
-            searchBar.paddingLeft,
+        searchBar.setPaddingRelative(
+            searchBar.paddingStart,
             searchBar.paddingTop + statusBarHeight(activity),
-            searchBar.paddingRight,
+            searchBar.paddingEnd,
             searchBar.paddingBottom,
         )
 
@@ -108,43 +162,31 @@ object AppPicker {
         )
         listView.adapter = adapter
 
-        // A-Z index down the left. Each letter sits at the same height as the
-        // first app starting with that letter, and tapping one jumps the list
-        // to it. Letters track the list as it scrolls.
-        val letterBar = FrameLayout(activity)
-        val letterViews = mutableMapOf<Char, TextView>()
-        var cellSize = 0
+        // A-Z index down the left: one tappable cell per available letter, stacked
+        // in a single column against the top-left corner with no gaps between them.
+        // Tapping a cell jumps the list to the first app starting with that letter.
+        val letterBar = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         listContainer.addView(
             letterBar,
             FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP or Gravity.START,
             ),
         )
 
-        fun alignLetters() {
-            val firstRow = listView.getChildAt(0) ?: return
-            val rowHeight = firstRow.height
-            if (rowHeight <= 0) return
-            val contentTop = firstRow.top - listView.firstVisiblePosition * rowHeight
-            for ((letter, cell) in letterViews) {
-                val position = adapter.indexOfLetter(letter)
-                if (position >= 0) {
-                    // Center the letter on its app row rather than top-aligning it.
-                    val centered = contentTop + position * rowHeight + (rowHeight - cellSize) / 2f
-                    cell.translationY = centered
-                }
-            }
-        }
-
         fun rebuildLetterBar() {
             letterBar.removeAllViews()
-            letterViews.clear()
+            val letters = adapter.letters()
+            if (letters.isEmpty()) return
             val density = activity.resources.displayMetrics.density
-            val cell = (22 * density).roundToInt()
-            cellSize = cell
-            for (letter in adapter.letters()) {
+            val preferred = (22 * density).roundToInt()
+            // Shrink the cells just enough that every letter fits on screen; before
+            // the first layout the height is unknown, so fall back to the preferred
+            // size (a follow-up rebuild runs once the container is measured).
+            val available = listContainer.height - listContainer.paddingBottom
+            val cell = if (available > 0) minOf(preferred, available / letters.size) else preferred
+            for (letter in letters) {
                 val cellView = TextView(activity)
                 cellView.text = letter.uppercaseChar().toString()
                 cellView.textSize = 14f
@@ -155,58 +197,43 @@ object AppPicker {
                     val position = adapter.indexOfLetter(letter)
                     if (position >= 0) listView.setSelection(position)
                 }
-                letterBar.addView(
-                    cellView,
-                    FrameLayout.LayoutParams(cell, cell, Gravity.TOP or Gravity.START),
-                )
-                letterViews[letter] = cellView
+                letterBar.addView(cellView, LinearLayout.LayoutParams(cell, cell))
             }
-            listView.post { alignLetters() }
         }
         rebuildLetterBar()
-
-        listView.setOnScrollListener(object : AbsListView.OnScrollListener {
-            override fun onScrollStateChanged(view: AbsListView?, scrollState: Int) {}
-            override fun onScroll(
-                view: AbsListView?,
-                firstVisibleItem: Int,
-                visibleItemCount: Int,
-                totalItemCount: Int,
-            ) {
-                alignLetters()
-            }
-        })
-        listView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            listView.post { alignLetters() }
-        }
 
         searchInput.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
                 adapter.filter(s?.toString().orEmpty())
+                // A new query means a new result set: show it from the top.
+                listView.setSelection(0)
                 rebuildLetterBar()
             }
             override fun afterTextChanged(s: Editable?) {}
         })
 
         dialog.setOnDismissListener {
-            current = null
+            if (currentDialog === dialog) currentDialog = null
             onDismiss()
         }
-        current = dialog
         searchInput.requestFocus()
         searchInput.setSelection(searchInput.text.length)
         dialog.show()
-    }
-
-    /** Dismiss the picker if one is open (e.g. when the Home button is pressed). */
-    fun dismiss() {
-        current?.dismiss()
+        // The container is measured only after the dialog is shown; rebuild once
+        // more so the cells can be sized against the real height.
+        listContainer.post { rebuildLetterBar() }
     }
 
     private fun statusBarHeight(activity: Activity): Int {
         val res = activity.resources
         val id = res.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) res.getDimensionPixelSize(id) else 0
+    }
+
+    private fun navigationBarHeight(activity: Activity): Int {
+        val res = activity.resources
+        val id = res.getIdentifier("navigation_bar_height", "dimen", "android")
         return if (id > 0) res.getDimensionPixelSize(id) else 0
     }
 

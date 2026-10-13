@@ -3,6 +3,7 @@ package io.github.aurelia.nlauncher
 import android.app.Activity
 import android.app.AlertDialog
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -11,6 +12,7 @@ import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import android.window.OnBackInvokedDispatcher
 
 /**
  * nLauncher's own settings: a menu that opens the gesture bindings. Editing the
@@ -40,15 +42,42 @@ class LauncherSettingsActivity : Activity() {
         headerTitle = findViewById(R.id.settings_title)
 
         backButton.setOnClickListener { showScreen(Screen.MENU) }
-        showScreen(Screen.MENU)
+        registerBackCallback()
+        // Keep the user on the same screen across recreation (rotation, etc.).
+        val restored = savedInstanceState?.getString(STATE_SCREEN)
+            ?.let { runCatching { Screen.valueOf(it) }.getOrNull() }
+            ?: Screen.MENU
+        showScreen(restored)
     }
 
-    @Suppress("DEPRECATION")
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        outState.putString(STATE_SCREEN, screen.name)
+    }
+
+    /** Back returns to the menu first, then behaves like the platform default. */
+    @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
+        handleBack()
+    }
+
+    private fun handleBack() {
         if (screen != Screen.MENU) {
             showScreen(Screen.MENU)
         } else {
-            super.onBackPressed()
+            finish()
+        }
+    }
+
+    /**
+     * Android 13+ routes predictive back through [OnBackInvokedDispatcher], not
+     * [onBackPressed], so register a callback there as well.
+     */
+    private fun registerBackCallback() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            onBackInvokedDispatcher.registerOnBackInvokedCallback(
+                OnBackInvokedDispatcher.PRIORITY_DEFAULT,
+            ) { handleBack() }
         }
     }
 
@@ -204,5 +233,9 @@ class LauncherSettingsActivity : Activity() {
                 ViewGroup.LayoutParams.WRAP_CONTENT,
             ),
         )
+    }
+
+    private companion object {
+        private const val STATE_SCREEN = "io.github.aurelia.nlauncher.extra.SCREEN"
     }
 }
