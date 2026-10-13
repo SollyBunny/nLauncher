@@ -80,6 +80,8 @@ object AppPicker {
 
         val searchInput = dialog.findViewById<EditText>(R.id.search_input)
         val listContainer = dialog.findViewById<FrameLayout>(R.id.list_container)
+        // Keep the results clear of the navigation bar.
+        listContainer.setPaddingRelative(0, 0, 0, navigationBarHeight(activity))
         val adapter =
             Adapter(activity, apps) { entry ->
                 dialog.dismiss()
@@ -188,6 +190,8 @@ object AppPicker {
                     count: Int,
                 ) {
                     adapter.filter(s?.toString().orEmpty())
+                    // A new query means a new result set: show it from the top.
+                    listView.setSelection(0)
                     rebuildLetterBar()
                 }
 
@@ -273,6 +277,12 @@ object AppPicker {
     private fun statusBarHeight(activity: Activity): Int {
         val res = activity.resources
         val id = res.getIdentifier("status_bar_height", "dimen", "android")
+        return if (id > 0) res.getDimensionPixelSize(id) else 0
+    }
+
+    private fun navigationBarHeight(activity: Activity): Int {
+        val res = activity.resources
+        val id = res.getIdentifier("navigation_bar_height", "dimen", "android")
         return if (id > 0) res.getDimensionPixelSize(id) else 0
     }
 
