@@ -71,6 +71,7 @@ class LauncherActivity : Activity() {
         editBar = findViewById(R.id.edit_bar)
         topBar = findViewById(R.id.top_bar)
         clock = findViewById(R.id.clock)
+        clock.textSize = CLOCK_TEXT_SIZE
         wallpaperManager = WallpaperManager.getInstance(this)
 
         editBar.findViewById<View>(R.id.edit_done).setOnClickListener { setEditMode(false) }
@@ -441,5 +442,8 @@ class LauncherActivity : Activity() {
 
         private const val TAG = "nLauncher"
         private const val CLOCK_TICK_MS = 60_000L
+
+        /** Text size (sp) of the home screen clock. */
+        private const val CLOCK_TEXT_SIZE = 48f
     }
 }
