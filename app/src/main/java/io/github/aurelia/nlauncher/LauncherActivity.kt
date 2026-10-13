@@ -127,6 +127,12 @@ class LauncherActivity : Activity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
+        // The Home button re-delivers the HOME intent; always return to the plain
+        // home screen from there.
+        if (intent.hasCategory(Intent.CATEGORY_HOME)) {
+            goHome()
+            return
+        }
         setEditMode(intent.getBooleanExtra(EXTRA_EDIT_MODE, false))
     }
 
@@ -155,6 +161,18 @@ class LauncherActivity : Activity() {
         } else {
             super.onBackPressed()
         }
+    }
+
+    /**
+     * Return to the plain home screen. Used when the system Home button is pressed,
+     * which re-delivers the HOME intent: any open app picker is dismissed, the
+     * revealed search bar is tucked away and edit mode is left.
+     */
+    private fun goHome() {
+        AppPicker.dismiss()
+        root.visibility = View.VISIBLE
+        searchVisible = false
+        setEditMode(false)
     }
 
     // ---- Edit mode -------------------------------------------------------

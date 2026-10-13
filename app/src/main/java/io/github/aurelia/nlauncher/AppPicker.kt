@@ -34,6 +34,9 @@ object AppPicker {
 
     private class AppEntry(val label: String, val icon: Drawable, val intent: Intent)
 
+    /** The picker currently on screen, if any, so it can be dismissed on demand. */
+    private var current: Dialog? = null
+
     fun show(activity: Activity, onPicked: (Intent) -> Unit, onDismiss: () -> Unit = {}) {
         val pm = activity.packageManager
         val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
@@ -186,10 +189,19 @@ object AppPicker {
             override fun afterTextChanged(s: Editable?) {}
         })
 
-        dialog.setOnDismissListener { onDismiss() }
+        dialog.setOnDismissListener {
+            current = null
+            onDismiss()
+        }
+        current = dialog
         searchInput.requestFocus()
         searchInput.setSelection(searchInput.text.length)
         dialog.show()
+    }
+
+    /** Dismiss the picker if one is open (e.g. when the Home button is pressed). */
+    fun dismiss() {
+        current?.dismiss()
     }
 
     private fun statusBarHeight(activity: Activity): Int {
