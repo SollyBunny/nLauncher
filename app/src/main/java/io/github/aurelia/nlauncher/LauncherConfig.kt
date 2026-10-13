@@ -1,0 +1,88 @@
+package io.github.aurelia.nlauncher
+
+import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+
+/** A press or swipe the user can bind an action to. */
+enum class Gesture(val key: String) {
+    HOLD("hold"),
+    SWIPE_UP("swipe_up"),
+    SWIPE_DOWN("swipe_down"),
+    SWIPE_LEFT("swipe_left"),
+    SWIPE_RIGHT("swipe_right"),
+}
+
+/** What a [Gesture] does when it fires. */
+sealed class GestureAction {
+
+    object None : GestureAction()
+
+    object OpenSettings : GestureAction()
+
+    class OpenApp(val intent: Intent) : GestureAction()
+
+    fun serialize(): String = when (this) {
+        is None -> "none"
+        is OpenSettings -> "settings"
+        is OpenApp -> "app:" + intent.toUri(Intent.URI_INTENT_SCHEME)
+    }
+
+    companion object {
+        fun parse(value: String?): GestureAction = when {
+            value == null -> None
+            value == "settings" -> OpenSettings
+            value.startsWith("app:") -> runCatching {
+                OpenApp(Intent.parseUri(value.removePrefix("app:"), Intent.URI_INTENT_SCHEME))
+            }.getOrElse { None }
+            else -> None
+        }
+    }
+}
+
+/**
+ * Persisted launcher configuration. Favorites keep their order; gestures default
+ * to "hold press opens the settings" so there is always a way back in.
+ */
+object LauncherConfig {
+
+    private const val PREFS = "nlauncher"
+    private const val KEY_FAVORITES = "favorites"
+
+    private fun prefs(context: Context) =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+
+    private fun defaultFavorites() = listOf(FavoriteApp(Intent(Settings.ACTION_SETTINGS)))
+
+    fun favorites(context: Context): List<FavoriteApp> {
+        val raw = prefs(context).getString(KEY_FAVORITES, null) ?: return defaultFavorites()
+        return raw.split('\n')
+            .filter { it.isNotBlank() }
+            .mapNotNull { line ->
+                runCatching { FavoriteApp(Intent.parseUri(line, Intent.URI_INTENT_SCHEME)) }
+                    .getOrNull()
+            }
+    }
+
+    fun saveFavorites(context: Context, favorites: List<FavoriteApp>) {
+        val raw = favorites.joinToString("\n") { it.intent.toUri(Intent.URI_INTENT_SCHEME) }
+        prefs(context).edit().putString(KEY_FAVORITES, raw).apply()
+    }
+
+    fun gestureActions(context: Context): Map<Gesture, GestureAction> =
+        Gesture.entries.associateWith { gestureAction(context, it) }
+
+    fun gestureAction(context: Context, gesture: Gesture): GestureAction {
+        val stored = prefs(context).getString("gesture_" + gesture.key, null)
+        if (stored == null && gesture == Gesture.HOLD) return GestureAction.OpenSettings
+        return GestureAction.parse(stored)
+    }
+
+    fun saveGestureAction(context: Context, gesture: Gesture, action: GestureAction) {
+        prefs(context).edit().putString("gesture_" + gesture.key, action.serialize()).apply()
+    }
+
+    /** The settings screen must stay reachable through at least one gesture. */
+    fun hasSettingsAccess(actions: Collection<GestureAction>): Boolean =
+        actions.any { it is GestureAction.OpenSettings }
+}

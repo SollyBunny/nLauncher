@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="?android:attr/selectableItemBackground"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="8dp">
+
+    <!-- Matches the 48dp drag handle on the editable rows so the + icon and
+         the "Add favorite" label line up with the favorites. -->
+    <View
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:importantForAccessibility="no" />
+
+    <ImageView
+        android:id="@+id/add_app_icon"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_add"
+        android:tint="@color/icon_tint" />
+
+    <TextView
+        android:id="@+id/add_app_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:shadowColor="#99000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="3"
+        android:text="@string/add_favorite"
+        android:textColor="@color/icon_tint"
+        android:textSize="16sp" />
+
+</LinearLayout>

@@ -1,0 +1,15 @@
+<resources>
+    <color name="settings_background">#FF101418</color>
+
+    <color name="tab_selected">#FFFFFFFF</color>
+    <color name="tab_unselected">#8AFFFFFF</color>
+
+    <color name="text_primary">#FFFFFFFF</color>
+    <color name="text_secondary">#B3FFFFFF</color>
+
+    <color name="icon_tint">#E6FFFFFF</color>
+    <color name="icon_tint_muted">#8AFFFFFF</color>
+    <color name="icon_tint_delete">#FFFF5252</color>
+
+    <color name="divider">#1FFFFFFF</color>
+</resources>

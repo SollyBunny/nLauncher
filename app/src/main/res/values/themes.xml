@@ -1,0 +1,65 @@
+<resources>
+
+    <!-- Plain opaque theme used by the settings screen. -->
+    <style name="Theme.Mlauncherish" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/settings_background</item>
+        <item name="android:colorAccent">@android:color/holo_blue_light</item>
+    </style>
+
+    <!--
+        The home screen: fully transparent so the system wallpaper (static or live)
+        shows through, with FLAG_SHOW_WALLPAPER so the platform also forwards touch
+        events to the live wallpaper for interactivity.
+    -->
+    <style name="Theme.Mlauncherish.Launcher" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <style name="Theme.Mlauncherish.Settings" parent="Theme.Mlauncherish">
+        <item name="android:windowBackground">@color/settings_background</item>
+        <item name="android:statusBarColor">@color/settings_background</item>
+        <item name="android:navigationBarColor">@color/settings_background</item>
+    </style>
+
+    <!-- Full-screen app search picker: same deal as the home screen, wallpaper behind. -->
+    <style name="Theme.Mlauncherish.Search" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:windowShowWallpaper">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:colorBackgroundCacheHint">@null</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- Tab labels in the settings screen. -->
+    <style name="SettingsTab">
+        <item name="android:layout_width">wrap_content</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:background">?android:attr/selectableItemBackground</item>
+        <item name="android:paddingStart">16dp</item>
+        <item name="android:paddingEnd">16dp</item>
+        <item name="android:paddingTop">12dp</item>
+        <item name="android:paddingBottom">12dp</item>
+        <item name="android:textColor">@color/tab_unselected</item>
+        <item name="android:textSize">15sp</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+</resources>

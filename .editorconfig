@@ -1,0 +1,6 @@
+root = true
+
+[*.{kt,kts}]
+# Compose UI functions are conventionally PascalCased (e.g. HomeScreen, SettingSwitch).
+# Keep the function-naming rule strict for everything else but exempt @Composable.
+ktlint_function_naming_ignore_when_annotated_with = Composable
