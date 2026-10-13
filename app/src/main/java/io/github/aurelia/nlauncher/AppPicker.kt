@@ -36,6 +36,9 @@ import kotlin.math.roundToInt
  */
 object AppPicker {
 
+    /** Text size (sp) of the A-Z index letters down the side of the picker. */
+    private const val LETTER_TEXT_SIZE = 16f
+
     private class AppEntry(val label: String, val icon: Drawable, val intent: Intent)
 
     // The app list (labels, icons and intents) is built once and kept in memory for
@@ -162,10 +165,10 @@ object AppPicker {
         )
         listView.adapter = adapter
 
-        // A-Z index down the left: one tappable cell per available letter, stacked
-        // in a single column against the top-left corner with no gaps between them.
+        // A-Z index down the left: one tappable cell per available letter, laid out
+        // in two columns against the top-left corner with no gaps between them.
         // Tapping a cell jumps the list to the first app starting with that letter.
-        val letterBar = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        val letterBar = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
         listContainer.addView(
             letterBar,
             FrameLayout.LayoutParams(
@@ -181,23 +184,36 @@ object AppPicker {
             if (letters.isEmpty()) return
             val density = activity.resources.displayMetrics.density
             val preferred = (22 * density).roundToInt()
-            // Shrink the cells just enough that every letter fits on screen; before
+            // Give every cell an equal share of the available height, sized for the
+            // worst case of a full alphabet plus '#' (26 + 1). Two columns then hold
+            // the letters, so with a full alphabet each column takes roughly half the
+            // available height. Using the maximum rather than the current letter count
+            // keeps the cells a stable size as the filtered letter set changes. Before
             // the first layout the height is unknown, so fall back to the preferred
             // size (a follow-up rebuild runs once the container is measured).
             val available = listContainer.height - listContainer.paddingBottom
-            val cell = if (available > 0) minOf(preferred, available / letters.size) else preferred
-            for (letter in letters) {
-                val cellView = TextView(activity)
-                cellView.text = letter.uppercaseChar().toString()
-                cellView.textSize = 14f
-                cellView.gravity = Gravity.CENTER
-                cellView.setTextColor(activity.getColor(R.color.text_primary))
-                cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-                cellView.setOnClickListener {
-                    val position = adapter.indexOfLetter(letter)
-                    if (position >= 0) listView.setSelection(position)
+            val cell = if (available > 0) available / (26 + 1) else preferred
+            // Fill the first column before the second so the letters stay in order
+            // reading down, then across.
+            val perColumn = (letters.size + 1) / 2
+            val columns = listOf(letters.take(perColumn), letters.drop(perColumn))
+            for (columnLetters in columns) {
+                if (columnLetters.isEmpty()) continue
+                val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+                for (letter in columnLetters) {
+                    val cellView = TextView(activity)
+                    cellView.text = letter.uppercaseChar().toString()
+                    cellView.textSize = LETTER_TEXT_SIZE
+                    cellView.gravity = Gravity.CENTER
+                    cellView.setTextColor(activity.getColor(R.color.text_primary))
+                    cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
+                    cellView.setOnClickListener {
+                        val position = adapter.indexOfLetter(letter)
+                        if (position >= 0) listView.setSelection(position)
+                    }
+                    column.addView(cellView, LinearLayout.LayoutParams(cell, cell))
                 }
-                letterBar.addView(cellView, LinearLayout.LayoutParams(cell, cell))
+                letterBar.addView(column, LinearLayout.LayoutParams(cell, ViewGroup.LayoutParams.WRAP_CONTENT))
             }
         }
         rebuildLetterBar()
