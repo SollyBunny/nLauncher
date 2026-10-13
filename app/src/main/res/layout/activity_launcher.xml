@@ -16,6 +16,21 @@
         android:paddingEnd="8dp"
         android:paddingBottom="8dp" />
 
+    <!-- The time, in the top-left of the home screen. -->
+    <TextView
+        android:id="@+id/clock"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|start"
+        android:paddingStart="16dp"
+        android:shadowColor="#99000000"
+        android:shadowDx="1"
+        android:shadowDy="1"
+        android:shadowRadius="3"
+        android:textColor="@color/text_primary"
+        android:textSize="48sp"
+        android:textStyle="bold" />
+
     <!-- Shown only in edit mode: the title plus the way out. -->
     <LinearLayout
         android:id="@+id/edit_bar"

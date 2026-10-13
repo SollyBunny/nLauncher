@@ -5,6 +5,9 @@ import android.app.WallpaperManager
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.format.DateFormat
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.View
@@ -14,6 +17,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import java.util.Date
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
@@ -35,12 +39,22 @@ class LauncherActivity : Activity() {
     private lateinit var root: FrameLayout
     private lateinit var favoritesContainer: LinearLayout
     private lateinit var editBar: LinearLayout
+    private lateinit var clock: TextView
     private lateinit var wallpaperManager: WallpaperManager
     private lateinit var gestures: GestureDetector
 
     private val favorites = mutableListOf<FavoriteApp>()
     private var actions: Map<Gesture, GestureAction> = emptyMap()
     private var editMode = false
+
+    private val clockHandler = Handler(Looper.getMainLooper())
+    private val clockTick = object : Runnable {
+        override fun run() {
+            updateClock()
+            // Re-align to the next minute boundary so the time never lags.
+            clockHandler.postDelayed(this, CLOCK_TICK_MS - System.currentTimeMillis() % CLOCK_TICK_MS)
+        }
+    }
 
     private val swipeMinDistance: Float by lazy { 48f * resources.displayMetrics.density }
 
@@ -51,6 +65,7 @@ class LauncherActivity : Activity() {
         root = findViewById(R.id.root)
         favoritesContainer = findViewById(R.id.favorites)
         editBar = findViewById(R.id.edit_bar)
+        clock = findViewById(R.id.clock)
         wallpaperManager = WallpaperManager.getInstance(this)
 
         editBar.findViewById<View>(R.id.edit_done).setOnClickListener { setEditMode(false) }
@@ -112,6 +127,18 @@ class LauncherActivity : Activity() {
         super.onResume()
         actions = LauncherConfig.gestureActions(this)
         populateFavorites()
+        updateClock()
+        clockHandler.post(clockTick)
+    }
+
+    override fun onPause() {
+        super.onPause()
+        clockHandler.removeCallbacks(clockTick)
+    }
+
+    /** Show the current time, honoring the user's 12/24-hour setting. */
+    private fun updateClock() {
+        clock.text = DateFormat.getTimeFormat(this).format(Date())
     }
 
     @Suppress("DEPRECATION")
@@ -128,6 +155,8 @@ class LauncherActivity : Activity() {
     private fun setEditMode(enabled: Boolean) {
         editMode = enabled
         editBar.visibility = if (enabled) View.VISIBLE else View.GONE
+        // The edit bar owns the top of the screen while editing.
+        clock.visibility = if (enabled) View.GONE else View.VISIBLE
         populateFavorites()
     }
 
@@ -321,6 +350,12 @@ class LauncherActivity : Activity() {
                 nav = insets.systemWindowInsetBottom
             }
             view.setPaddingRelative(view.paddingStart, 0, view.paddingEnd, nav)
+            clock.setPadding(
+                clock.paddingLeft,
+                dp(12f) + status,
+                clock.paddingRight,
+                clock.paddingBottom,
+            )
             editBar.setPadding(
                 editBar.paddingStart,
                 dp(12f) + status,
@@ -335,5 +370,7 @@ class LauncherActivity : Activity() {
 
     companion object {
         const val EXTRA_EDIT_MODE = "io.github.aurelia.nlauncher.extra.EDIT_MODE"
+
+        private const val CLOCK_TICK_MS = 60_000L
     }
 }
