@@ -27,7 +27,6 @@
         android:shadowDx="1"
         android:shadowDy="1"
         android:shadowRadius="3"
-        android:textColor="@android:color/white"
-        android:textSize="16sp" />
+        android:textColor="@android:color/white" />
 
 </LinearLayout>

@@ -11,11 +11,11 @@ import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
-import android.widget.AbsListView
 import android.widget.BaseAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
@@ -26,11 +26,14 @@ import kotlin.math.roundToInt
  * edit mode go through here, so there is exactly one implementation.
  *
  * It opens as a full-screen search: the search bar sits on top and is auto-focused,
- * the results are a list in the right half of the screen, filtered as you type.
+ * the results fill the width next to the A-Z index, filtered as you type.
  * Like the home screen, the window is transparent with FLAG_SHOW_WALLPAPER, so the
  * live wallpaper stays visible (and interactive) behind it.
  */
 object AppPicker {
+    /** Text size (sp) of the A-Z index letters down the side of the picker. */
+    private const val LETTER_TEXT_SIZE = 16f
+
     private class AppEntry(
         val label: String,
         val icon: Drawable,
@@ -103,98 +106,81 @@ object AppPicker {
             searchBar.paddingBottom,
         )
 
-        // The results take up the right half of the screen, aligned right.
-        val halfWidth = (activity.resources.displayMetrics.widthPixels * 0.5f).roundToInt()
-        val listView = ListView(activity)
-        listView.divider = null
-        listView.dividerHeight = 0
+        // A-Z index on the left, results filling all the remaining width so the
+        // app list gets as much room as the screen can spare.
+        val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
         listContainer.addView(
-            listView,
+            row,
             FrameLayout.LayoutParams(
-                halfWidth,
                 ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.TOP or Gravity.END,
-            ),
-        )
-        listView.adapter = adapter
-
-        // A-Z index down the left. Each letter sits at the same height as the
-        // first app starting with that letter, and tapping one jumps the list
-        // to it. Letters track the list as it scrolls.
-        val letterBar = FrameLayout(activity)
-        val letterViews = mutableMapOf<Char, TextView>()
-        var cellSize = 0
-        listContainer.addView(
-            letterBar,
-            FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 Gravity.TOP or Gravity.START,
             ),
         )
 
-        fun alignLetters() {
-            val firstRow = listView.getChildAt(0) ?: return
-            val rowHeight = firstRow.height
-            if (rowHeight <= 0) return
-            val contentTop = firstRow.top - listView.firstVisiblePosition * rowHeight
-            for ((letter, cell) in letterViews) {
-                val position = adapter.indexOfLetter(letter)
-                if (position >= 0) {
-                    // Center the letter on its app row rather than top-aligning it.
-                    val centered = contentTop + position * rowHeight + (rowHeight - cellSize) / 2f
-                    cell.translationY = centered
-                }
-            }
-        }
+        // A-Z index: one tappable cell per available letter, laid out in two
+        // columns against the top-left corner with no gaps between them. Tapping
+        // a cell jumps the list to the first app starting with that letter.
+        val letterBar = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
+        row.addView(
+            letterBar,
+            LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+            ),
+        )
+
+        val listView = ListView(activity)
+        listView.divider = null
+        listView.dividerHeight = 0
+        row.addView(
+            listView,
+            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f),
+        )
+        listView.adapter = adapter
 
         fun rebuildLetterBar() {
             letterBar.removeAllViews()
-            letterViews.clear()
+            val letters = adapter.letters()
+            if (letters.isEmpty()) return
             val density = activity.resources.displayMetrics.density
-            val cell = (22 * density).roundToInt()
-            cellSize = cell
-            for (letter in adapter.letters()) {
-                val cellView = TextView(activity)
-                cellView.text = letter.uppercaseChar().toString()
-                cellView.textSize = 14f
-                cellView.gravity = Gravity.CENTER
-                cellView.setTextColor(activity.getColor(R.color.text_primary))
-                cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-                cellView.setOnClickListener {
-                    val position = adapter.indexOfLetter(letter)
-                    if (position >= 0) listView.setSelection(position)
+            val preferred = (22 * density).roundToInt()
+            // Give every cell an equal share of the available height, sized for the
+            // worst case of a full alphabet plus '#' (26 + 1). Two columns then hold
+            // the letters, so with a full alphabet each column takes roughly half the
+            // available height. Using the maximum rather than the current letter count
+            // keeps the cells a stable size as the filtered letter set changes. Before
+            // the first layout the height is unknown, so fall back to the preferred
+            // size (a follow-up rebuild runs once the container is measured).
+            val available = listContainer.height - listContainer.paddingBottom
+            val cell = if (available > 0) available / (26 + 1) else preferred
+            // Fill the first column before the second so the letters stay in order
+            // reading down, then across.
+            val perColumn = (letters.size + 1) / 2
+            val columns = listOf(letters.take(perColumn), letters.drop(perColumn))
+            for (columnLetters in columns) {
+                if (columnLetters.isEmpty()) continue
+                val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+                for (letter in columnLetters) {
+                    val cellView = TextView(activity)
+                    cellView.text = letter.uppercaseChar().toString()
+                    cellView.textSize = LETTER_TEXT_SIZE
+                    cellView.gravity = Gravity.CENTER
+                    cellView.setTextColor(activity.getColor(R.color.text_primary))
+                    cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
+                    cellView.setOnClickListener {
+                        val position = adapter.indexOfLetter(letter)
+                        if (position >= 0) listView.setSelection(position)
+                    }
+                    column.addView(cellView, LinearLayout.LayoutParams(cell, cell))
                 }
                 letterBar.addView(
-                    cellView,
-                    FrameLayout.LayoutParams(cell, cell, Gravity.TOP or Gravity.START),
+                    column,
+                    LinearLayout.LayoutParams(cell, ViewGroup.LayoutParams.WRAP_CONTENT),
                 )
-                letterViews[letter] = cellView
             }
-            listView.post { alignLetters() }
         }
         rebuildLetterBar()
-
-        listView.setOnScrollListener(
-            object : AbsListView.OnScrollListener {
-                override fun onScrollStateChanged(
-                    view: AbsListView?,
-                    scrollState: Int,
-                ) {}
-
-                override fun onScroll(
-                    view: AbsListView?,
-                    firstVisibleItem: Int,
-                    visibleItemCount: Int,
-                    totalItemCount: Int,
-                ) {
-                    alignLetters()
-                }
-            },
-        )
-        listView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            listView.post { alignLetters() }
-        }
 
         searchInput.addTextChangedListener(
             object : TextWatcher {
@@ -227,6 +213,9 @@ object AppPicker {
         searchInput.requestFocus()
         searchInput.setSelection(searchInput.text.length)
         dialog.show()
+        // The container is measured only after the dialog is shown; rebuild once
+        // more so the cells can be sized against the real height.
+        listContainer.post { rebuildLetterBar() }
     }
 
     /** Dismiss the picker if one is open (e.g. when the Home button is pressed). */
@@ -295,6 +284,7 @@ object AppPicker {
             val label = view.findViewById<TextView>(R.id.app_choice_label)
             icon.setImageDrawable(entry.icon)
             label.text = entry.label
+            label.textSize = APP_LABEL_TEXT_SIZE
 
             // The row itself is clickable (see item_app_choice.xml), so it consumes
             // the touch and ListView's onItemClick never fires; handle the pick here.

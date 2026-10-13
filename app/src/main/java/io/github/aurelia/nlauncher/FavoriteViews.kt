@@ -8,6 +8,9 @@ import android.widget.ImageView
 import android.widget.TextView
 import kotlin.math.roundToInt
 
+/** Text size (sp) of an app's label, everywhere it is shown. */
+const val APP_LABEL_TEXT_SIZE = 16f
+
 /** App icons are drawn at this multiple of the label's text size. */
 const val ICON_TEXT_SCALE = 1.8f
 
@@ -28,6 +31,7 @@ object FavoriteViews {
         val label = view.findViewById<TextView>(R.id.favorite_label)
         icon.setImageDrawable(resolved.icon)
         label.text = resolved.label
+        label.textSize = APP_LABEL_TEXT_SIZE
 
         // Icons sit at ICON_TEXT_SCALE times the label's text size.
         val size = (label.textSize * ICON_TEXT_SCALE).roundToInt()

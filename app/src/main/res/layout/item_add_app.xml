@@ -34,7 +34,6 @@
         android:shadowDy="1"
         android:shadowRadius="3"
         android:text="@string/add_favorite"
-        android:textColor="@color/icon_tint"
-        android:textSize="16sp" />
+        android:textColor="@color/icon_tint" />
 
 </LinearLayout>

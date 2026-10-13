@@ -241,6 +241,7 @@ class LauncherActivity : Activity() {
         // Its + icon matches the favorites' icon size so the row lines up.
         val addLabel = add.findViewById<TextView>(R.id.add_app_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_app_icon)
+        addLabel.textSize = APP_LABEL_TEXT_SIZE
         val addIconSize = (addLabel.textSize * ICON_TEXT_SCALE).roundToInt()
         addIcon.layoutParams =
             addIcon.layoutParams.apply {
