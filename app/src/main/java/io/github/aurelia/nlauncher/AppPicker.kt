@@ -75,7 +75,10 @@ object AppPicker {
 
         val searchInput = dialog.findViewById<EditText>(R.id.search_input)
         val listContainer = dialog.findViewById<FrameLayout>(R.id.list_container)
-        val adapter = Adapter(activity, apps)
+        val adapter = Adapter(activity, apps) { entry ->
+            dialog.dismiss()
+            onPicked(entry.intent)
+        }
 
         // Keep the search bar clear of the status bar. Applied to the whole bar
         // (icon + input) so they move down together.
@@ -101,10 +104,6 @@ object AppPicker {
             ),
         )
         listView.adapter = adapter
-        listView.setOnItemClickListener { _, _, position, _ ->
-            dialog.dismiss()
-            onPicked(adapter.entry(position).intent)
-        }
 
         // A-Z index down the left. Each letter sits at the same height as the
         // first app starting with that letter, and tapping one jumps the list
@@ -202,11 +201,10 @@ object AppPicker {
     private class Adapter(
         private val activity: Activity,
         private val all: List<AppEntry>,
+        private val onPick: (AppEntry) -> Unit,
     ) : BaseAdapter() {
 
         private var shown: List<AppEntry> = all
-
-        fun entry(position: Int): AppEntry = shown[position]
 
         /** Distinct index labels: '#' first (labels not starting with a letter), then a-z. */
         fun letters(): List<Char> {
@@ -246,6 +244,10 @@ object AppPicker {
             val label = view.findViewById<TextView>(R.id.app_choice_label)
             icon.setImageDrawable(entry.icon)
             label.text = entry.label
+
+            // The row itself is clickable (see item_app_choice.xml), so it consumes
+            // the touch and ListView's onItemClick never fires; handle the pick here.
+            view.setOnClickListener { onPick(entry) }
 
             // Icons sit at ICON_TEXT_SCALE times the label's text size.
             val size = (label.textSize * ICON_TEXT_SCALE).roundToInt()
