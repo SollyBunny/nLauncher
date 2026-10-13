@@ -20,11 +20,14 @@ sealed class GestureAction {
 
     object OpenSettings : GestureAction()
 
+    object ShowSearchBar : GestureAction()
+
     class OpenApp(val intent: Intent) : GestureAction()
 
     fun serialize(): String = when (this) {
         is None -> "none"
         is OpenSettings -> "settings"
+        is ShowSearchBar -> "search_bar"
         is OpenApp -> "app:" + intent.toUri(Intent.URI_INTENT_SCHEME)
     }
 
@@ -32,6 +35,7 @@ sealed class GestureAction {
         fun parse(value: String?): GestureAction = when {
             value == null -> None
             value == "settings" -> OpenSettings
+            value == "search_bar" -> ShowSearchBar
             value.startsWith("app:") -> runCatching {
                 OpenApp(Intent.parseUri(value.removePrefix("app:"), Intent.URI_INTENT_SCHEME))
             }.getOrElse { None }
@@ -74,8 +78,14 @@ object LauncherConfig {
 
     fun gestureAction(context: Context, gesture: Gesture): GestureAction {
         val stored = prefs(context).getString("gesture_" + gesture.key, null)
-        if (stored == null && gesture == Gesture.HOLD) return GestureAction.OpenSettings
-        return GestureAction.parse(stored)
+        if (stored != null) return GestureAction.parse(stored)
+        return when (gesture) {
+            // Always keep a way back into these settings, and make the search bar
+            // reachable out of the box.
+            Gesture.HOLD -> GestureAction.OpenSettings
+            Gesture.SWIPE_UP -> GestureAction.ShowSearchBar
+            else -> GestureAction.None
+        }
     }
 
     fun saveGestureAction(context: Context, gesture: Gesture, action: GestureAction) {

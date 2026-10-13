@@ -23,6 +23,7 @@
     <string name="action_none">Nothing</string>
     <string name="action_open_settings">Open nLauncher settings</string>
     <string name="action_open_app">Open app</string>
+    <string name="action_show_search">Show search bar</string>
     <string name="action_open_app_named">Open %1$s</string>
 
     <string name="dialog_choose_action">Choose action</string>

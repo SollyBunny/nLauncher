@@ -39,13 +39,16 @@ class LauncherActivity : Activity() {
     private lateinit var root: FrameLayout
     private lateinit var favoritesContainer: LinearLayout
     private lateinit var editBar: LinearLayout
+    private lateinit var topBar: LinearLayout
     private lateinit var clock: TextView
+    private lateinit var homeSearchBar: LinearLayout
     private lateinit var wallpaperManager: WallpaperManager
     private lateinit var gestures: GestureDetector
 
     private val favorites = mutableListOf<FavoriteApp>()
     private var actions: Map<Gesture, GestureAction> = emptyMap()
     private var editMode = false
+    private var searchVisible = false
 
     private val clockHandler = Handler(Looper.getMainLooper())
     private val clockTick = object : Runnable {
@@ -65,10 +68,14 @@ class LauncherActivity : Activity() {
         root = findViewById(R.id.root)
         favoritesContainer = findViewById(R.id.favorites)
         editBar = findViewById(R.id.edit_bar)
+        topBar = findViewById(R.id.top_bar)
         clock = findViewById(R.id.clock)
+        homeSearchBar = findViewById(R.id.home_search_bar)
         wallpaperManager = WallpaperManager.getInstance(this)
 
         editBar.findViewById<View>(R.id.edit_done).setOnClickListener { setEditMode(false) }
+        // Tapping the revealed search bar opens the full-screen app search.
+        homeSearchBar.setOnClickListener { openSearch() }
 
         gestures = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
             override fun onDown(e: MotionEvent): Boolean = true
@@ -157,6 +164,7 @@ class LauncherActivity : Activity() {
         editBar.visibility = if (enabled) View.VISIBLE else View.GONE
         // The edit bar owns the top of the screen while editing.
         clock.visibility = if (enabled) View.GONE else View.VISIBLE
+        homeSearchBar.visibility = if (!enabled && searchVisible) View.VISIBLE else View.GONE
         populateFavorites()
     }
 
@@ -302,8 +310,32 @@ class LauncherActivity : Activity() {
         when (val action = actions[gesture] ?: GestureAction.None) {
             is GestureAction.None -> Unit
             is GestureAction.OpenSettings -> openLauncherSettings()
+            is GestureAction.ShowSearchBar -> showSearchBar()
             is GestureAction.OpenApp -> launch(action.intent)
         }
+    }
+
+    /** Reveal the search bar; a second identical action leaves it as it is. */
+    private fun showSearchBar() {
+        searchVisible = true
+        homeSearchBar.visibility = View.VISIBLE
+    }
+
+    /**
+     * Open the full-screen app search. The home screen is hidden while the picker
+     * is up (it is transparent, so whatever is behind it would otherwise show), and
+     * restored when the picker is dismissed.
+     */
+    private fun openSearch() {
+        root.visibility = View.GONE
+        AppPicker.show(
+            this,
+            onPicked = { intent -> launch(intent) },
+            onDismiss = {
+                root.visibility = View.VISIBLE
+                populateFavorites()
+            },
+        )
     }
 
     private fun launch(intent: Intent) {
@@ -350,11 +382,11 @@ class LauncherActivity : Activity() {
                 nav = insets.systemWindowInsetBottom
             }
             view.setPaddingRelative(view.paddingStart, 0, view.paddingEnd, nav)
-            clock.setPadding(
-                clock.paddingLeft,
+            topBar.setPadding(
+                topBar.paddingStart,
                 dp(12f) + status,
-                clock.paddingRight,
-                clock.paddingBottom,
+                topBar.paddingEnd,
+                topBar.paddingBottom,
             )
             editBar.setPadding(
                 editBar.paddingStart,

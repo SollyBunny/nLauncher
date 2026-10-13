@@ -135,6 +135,7 @@ class LauncherSettingsActivity : Activity() {
     private fun actionSummary(action: GestureAction): CharSequence = when (action) {
         is GestureAction.None -> getString(R.string.action_none)
         is GestureAction.OpenSettings -> getString(R.string.action_open_settings)
+        is GestureAction.ShowSearchBar -> getString(R.string.action_show_search)
         is GestureAction.OpenApp -> getString(
             R.string.action_open_app_named,
             FavoriteApp(action.intent).resolve(this).label,
@@ -146,6 +147,7 @@ class LauncherSettingsActivity : Activity() {
             getString(R.string.action_none),
             getString(R.string.action_open_settings),
             getString(R.string.action_open_app),
+            getString(R.string.action_show_search),
         )
         AlertDialog.Builder(this)
             .setTitle(R.string.dialog_choose_action)
@@ -166,6 +168,7 @@ class LauncherSettingsActivity : Activity() {
                             onDismiss = { settingsRoot.visibility = View.VISIBLE },
                         )
                     }
+                    3 -> applyGesture(gesture, GestureAction.ShowSearchBar)
                 }
             }
             .setNegativeButton(android.R.string.cancel, null)

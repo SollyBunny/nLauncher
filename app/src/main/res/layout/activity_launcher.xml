@@ -16,20 +16,66 @@
         android:paddingEnd="8dp"
         android:paddingBottom="8dp" />
 
-    <!-- The time, in the top-left of the home screen. -->
-    <TextView
-        android:id="@+id/clock"
-        android:layout_width="wrap_content"
+    <!-- Top-left column: the time, with the revealable search bar beneath it. -->
+    <LinearLayout
+        android:id="@+id/top_bar"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top|start"
+        android:orientation="vertical"
         android:paddingStart="16dp"
-        android:shadowColor="#99000000"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@color/text_primary"
-        android:textSize="48sp"
-        android:textStyle="bold" />
+        android:paddingEnd="16dp">
+
+        <TextView
+            android:id="@+id/clock"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:shadowColor="#99000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            android:textColor="@color/text_primary"
+            android:textSize="48sp"
+            android:textStyle="bold" />
+
+        <!-- Revealed by the "Show search bar" gesture; tapping it opens the search. -->
+        <LinearLayout
+            android:id="@+id/home_search_bar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_search_pill"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="22dp"
+                android:layout_height="22dp"
+                android:layout_marginStart="16dp"
+                android:layout_marginTop="13dp"
+                android:layout_marginBottom="13dp"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_search"
+                android:tint="@color/icon_tint_muted" />
+
+            <TextView
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:paddingStart="12dp"
+                android:paddingEnd="16dp"
+                android:paddingTop="13dp"
+                android:paddingBottom="13dp"
+                android:text="@string/search_apps"
+                android:textColor="@color/icon_tint_muted"
+                android:textSize="16sp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
 
     <!-- Shown only in edit mode: the title plus the way out. -->
     <LinearLayout
