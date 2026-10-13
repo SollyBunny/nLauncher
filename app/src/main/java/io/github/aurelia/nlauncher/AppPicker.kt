@@ -2,9 +2,13 @@ package io.github.aurelia.nlauncher
 
 import android.app.Activity
 import android.app.Dialog
+import android.content.BroadcastReceiver
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.graphics.drawable.Drawable
+import android.os.Build
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -43,32 +47,18 @@ object AppPicker {
     /** The picker currently on screen, if any, so it can be dismissed on demand. */
     private var current: Dialog? = null
 
+    // The app list (labels, icons and intents) is built once and kept in memory for
+    // the life of the process. Callers never see this field: they ask for the list
+    // through [apps], which loads it on first use and refreshes it on package changes.
+    private var cachedApps: List<AppEntry>? = null
+    private var watchingPackages = false
+
     fun show(
         activity: Activity,
         onPicked: (Intent) -> Unit,
         onDismiss: () -> Unit = {},
     ) {
-        val pm = activity.packageManager
-        val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-        val apps =
-            pm
-                .queryIntentActivities(main, 0)
-                .asSequence()
-                .map { it.activityInfo }
-                // Keep the launcher's own home activity out of the picker list.
-                .filter { it.packageName != activity.packageName }
-                .distinctBy { it.packageName to it.name }
-                .map {
-                    AppEntry(
-                        label = it.loadLabel(pm).toString(),
-                        icon = it.loadIcon(pm),
-                        intent =
-                            Intent(Intent.ACTION_MAIN)
-                                .addCategory(Intent.CATEGORY_LAUNCHER)
-                                .setComponent(ComponentName(it.packageName, it.name)),
-                    )
-                }.sortedBy { it.label.lowercase() }
-                .toList()
+        val apps = apps(activity)
 
         if (apps.isEmpty()) {
             Toast.makeText(activity, R.string.no_apps, Toast.LENGTH_SHORT).show()
@@ -221,6 +211,63 @@ object AppPicker {
     /** Dismiss the picker if one is open (e.g. when the Home button is pressed). */
     fun dismiss() {
         current?.dismiss()
+    }
+
+    /**
+     * The launchable apps, in label order. Resolves the list on first use and then
+     * keeps it in memory, invalidated whenever packages are installed, removed or
+     * changed, so opening the picker stays cheap.
+     */
+    private fun apps(context: Context): List<AppEntry> {
+        cachedApps?.let { return it }
+        val pm = context.packageManager
+        val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val loaded =
+            pm.queryIntentActivities(main, 0)
+                .asSequence()
+                .map { it.activityInfo }
+                // Keep the launcher's own home activity out of the picker list.
+                .filter { it.packageName != context.packageName }
+                .distinctBy { it.packageName to it.name }
+                .map {
+                    AppEntry(
+                        label = it.loadLabel(pm).toString(),
+                        icon = it.loadIcon(pm),
+                        intent =
+                            Intent(Intent.ACTION_MAIN)
+                                .addCategory(Intent.CATEGORY_LAUNCHER)
+                                .setComponent(ComponentName(it.packageName, it.name)),
+                    )
+                }.sortedBy { it.label.lowercase() }
+                .toList()
+        cachedApps = loaded
+        watchPackages(context.applicationContext)
+        return loaded
+    }
+
+    /** Invalidate the cached app list when apps are installed, removed or changed. */
+    private fun watchPackages(context: Context) {
+        if (watchingPackages) return
+        watchingPackages = true
+        val filter =
+            IntentFilter().apply {
+                addAction(Intent.ACTION_PACKAGE_ADDED)
+                addAction(Intent.ACTION_PACKAGE_REMOVED)
+                addAction(Intent.ACTION_PACKAGE_CHANGED)
+                addAction(Intent.ACTION_PACKAGE_REPLACED)
+                addDataScheme("package")
+            }
+        val receiver =
+            object : BroadcastReceiver() {
+                override fun onReceive(context: Context?, intent: Intent?) {
+                    cachedApps = null
+                }
+            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            context.registerReceiver(receiver, filter)
+        }
     }
 
     private fun statusBarHeight(activity: Activity): Int {
