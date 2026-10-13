@@ -38,7 +38,6 @@ import kotlin.math.roundToInt
  * added around each one. There is no second copy of the home screen anywhere.
  */
 class LauncherActivity : Activity() {
-
     private lateinit var root: FrameLayout
     private lateinit var favoritesContainer: LinearLayout
     private lateinit var editBar: LinearLayout
@@ -52,13 +51,14 @@ class LauncherActivity : Activity() {
     private var editMode = false
 
     private val clockHandler = Handler(Looper.getMainLooper())
-    private val clockTick = object : Runnable {
-        override fun run() {
-            updateClock()
-            // Re-align to the next minute boundary so the time never lags.
-            clockHandler.postDelayed(this, CLOCK_TICK_MS - System.currentTimeMillis() % CLOCK_TICK_MS)
+    private val clockTick =
+        object : Runnable {
+            override fun run() {
+                updateClock()
+                // Re-align to the next minute boundary so the time never lags.
+                clockHandler.postDelayed(this, CLOCK_TICK_MS - System.currentTimeMillis() % CLOCK_TICK_MS)
+            }
         }
-    }
 
     private val swipeMinDistance: Float by lazy { 48f * resources.displayMetrics.density }
 
@@ -76,41 +76,46 @@ class LauncherActivity : Activity() {
 
         editBar.findViewById<View>(R.id.edit_done).setOnClickListener { setEditMode(false) }
 
-        gestures = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDown(e: MotionEvent): Boolean = true
+        gestures =
+            GestureDetector(
+                this,
+                object : GestureDetector.SimpleOnGestureListener() {
+                    override fun onDown(e: MotionEvent): Boolean = true
 
-            /**
-             * A tap on empty space. Legacy live wallpapers react to COMMAND_TAP
-             * (newer ones get the raw touch forwarded by the platform already).
-             */
-            override fun onSingleTapUp(e: MotionEvent): Boolean {
-                forwardTapToWallpaper(e.x, e.y)
-                return true
-            }
+                    /**
+                     * A tap on empty space. Legacy live wallpapers react to COMMAND_TAP
+                     * (newer ones get the raw touch forwarded by the platform already).
+                     */
+                    override fun onSingleTapUp(e: MotionEvent): Boolean {
+                        forwardTapToWallpaper(e.x, e.y)
+                        return true
+                    }
 
-            override fun onLongPress(e: MotionEvent) {
-                trigger(Gesture.HOLD)
-            }
+                    override fun onLongPress(e: MotionEvent) {
+                        trigger(Gesture.HOLD)
+                    }
 
-            override fun onFling(
-                e1: MotionEvent?,
-                e2: MotionEvent,
-                velocityX: Float,
-                velocityY: Float,
-            ): Boolean {
-                val start = e1 ?: return false
-                val dx = e2.x - start.x
-                val dy = e2.y - start.y
-                if (abs(dx) < swipeMinDistance && abs(dy) < swipeMinDistance) return false
-                val gesture = if (abs(dx) > abs(dy)) {
-                    if (dx > 0) Gesture.SWIPE_RIGHT else Gesture.SWIPE_LEFT
-                } else {
-                    if (dy > 0) Gesture.SWIPE_DOWN else Gesture.SWIPE_UP
-                }
-                trigger(gesture)
-                return true
-            }
-        })
+                    override fun onFling(
+                        e1: MotionEvent?,
+                        e2: MotionEvent,
+                        velocityX: Float,
+                        velocityY: Float,
+                    ): Boolean {
+                        val start = e1 ?: return false
+                        val dx = e2.x - start.x
+                        val dy = e2.y - start.y
+                        if (abs(dx) < swipeMinDistance && abs(dy) < swipeMinDistance) return false
+                        val gesture =
+                            if (abs(dx) > abs(dy)) {
+                                if (dx > 0) Gesture.SWIPE_RIGHT else Gesture.SWIPE_LEFT
+                            } else {
+                                if (dy > 0) Gesture.SWIPE_DOWN else Gesture.SWIPE_UP
+                            }
+                        trigger(gesture)
+                        return true
+                    }
+                },
+            )
 
         // Only touches that no child (a favorite) consumed reach the root. Gestures
         // belong to the plain home screen, so they stay dormant while editing.
@@ -237,10 +242,11 @@ class LauncherActivity : Activity() {
         val addLabel = add.findViewById<TextView>(R.id.add_app_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_app_icon)
         val addIconSize = (addLabel.textSize * ICON_TEXT_SCALE).roundToInt()
-        addIcon.layoutParams = addIcon.layoutParams.apply {
-            width = addIconSize
-            height = addIconSize
-        }
+        addIcon.layoutParams =
+            addIcon.layoutParams.apply {
+                width = addIconSize
+                height = addIconSize
+            }
         add.setOnClickListener {
             // Only the search UI should show while picking; hide the whole home
             // screen (favorites, edit bar) so nothing renders behind it.
@@ -286,12 +292,16 @@ class LauncherActivity : Activity() {
     }
 
     /** Drag a row by its handle to reorder it. */
-    private inner class DragTouchListener(private val row: View) : View.OnTouchListener {
-
+    private inner class DragTouchListener(
+        private val row: View,
+    ) : View.OnTouchListener {
         private var startRawY = 0f
         private var dragging = false
 
-        override fun onTouch(v: View, event: MotionEvent): Boolean {
+        override fun onTouch(
+            v: View,
+            event: MotionEvent,
+        ): Boolean {
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     dragging = true
@@ -386,7 +396,10 @@ class LauncherActivity : Activity() {
         startActivity(Intent(this, LauncherSettingsActivity::class.java))
     }
 
-    private fun forwardTapToWallpaper(x: Float, y: Float) {
+    private fun forwardTapToWallpaper(
+        x: Float,
+        y: Float,
+    ) {
         val location = IntArray(2)
         root.getLocationOnScreen(location)
         try {

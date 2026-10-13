@@ -20,7 +20,6 @@ import android.window.OnBackInvokedDispatcher
  * mode, on the actual home screen, so there is only one copy of that UI.
  */
 class LauncherSettingsActivity : Activity() {
-
     private enum class Screen { MENU, GESTURES }
 
     private lateinit var content: FrameLayout
@@ -44,9 +43,11 @@ class LauncherSettingsActivity : Activity() {
         backButton.setOnClickListener { showScreen(Screen.MENU) }
         registerBackCallback()
         // Keep the user on the same screen across recreation (rotation, etc.).
-        val restored = savedInstanceState?.getString(STATE_SCREEN)
-            ?.let { runCatching { Screen.valueOf(it) }.getOrNull() }
-            ?: Screen.MENU
+        val restored =
+            savedInstanceState
+                ?.getString(STATE_SCREEN)
+                ?.let { runCatching { Screen.valueOf(it) }.getOrNull() }
+                ?: Screen.MENU
         showScreen(restored)
     }
 
@@ -92,10 +93,11 @@ class LauncherSettingsActivity : Activity() {
         )
 
         content.removeAllViews()
-        val panel = when (target) {
-            Screen.MENU -> buildMenuView()
-            Screen.GESTURES -> buildGesturesView()
-        }
+        val panel =
+            when (target) {
+                Screen.MENU -> buildMenuView()
+                Screen.GESTURES -> buildGesturesView()
+            }
         content.addView(
             panel,
             FrameLayout.LayoutParams(
@@ -114,7 +116,10 @@ class LauncherSettingsActivity : Activity() {
         return scrollable(list)
     }
 
-    private fun menuRow(titleRes: Int, onClick: () -> Unit): View {
+    private fun menuRow(
+        titleRes: Int,
+        onClick: () -> Unit,
+    ): View {
         val row = layoutInflater.inflate(R.layout.item_menu, null, false)
         row.findViewById<TextView>(R.id.menu_title).setText(titleRes)
         row.setOnClickListener { onClick() }
@@ -145,15 +150,16 @@ class LauncherSettingsActivity : Activity() {
         gesturesList.removeAllViews()
         for (gesture in Gesture.entries) {
             val row = layoutInflater.inflate(R.layout.item_gesture, gesturesList, false)
-            row.findViewById<TextView>(R.id.gesture_name).text = getString(
-                when (gesture) {
-                    Gesture.HOLD -> R.string.gesture_hold
-                    Gesture.SWIPE_UP -> R.string.gesture_swipe_up
-                    Gesture.SWIPE_DOWN -> R.string.gesture_swipe_down
-                    Gesture.SWIPE_LEFT -> R.string.gesture_swipe_left
-                    Gesture.SWIPE_RIGHT -> R.string.gesture_swipe_right
-                },
-            )
+            row.findViewById<TextView>(R.id.gesture_name).text =
+                getString(
+                    when (gesture) {
+                        Gesture.HOLD -> R.string.gesture_hold
+                        Gesture.SWIPE_UP -> R.string.gesture_swipe_up
+                        Gesture.SWIPE_DOWN -> R.string.gesture_swipe_down
+                        Gesture.SWIPE_LEFT -> R.string.gesture_swipe_left
+                        Gesture.SWIPE_RIGHT -> R.string.gesture_swipe_right
+                    },
+                )
             row.findViewById<TextView>(R.id.gesture_action).text =
                 actionSummary(LauncherConfig.gestureAction(this, gesture))
             row.setOnClickListener { chooseAction(gesture) }
@@ -161,24 +167,28 @@ class LauncherSettingsActivity : Activity() {
         }
     }
 
-    private fun actionSummary(action: GestureAction): CharSequence = when (action) {
-        is GestureAction.None -> getString(R.string.action_none)
-        is GestureAction.OpenSettings -> getString(R.string.action_open_settings)
-        is GestureAction.ShowAppSearch -> getString(R.string.action_show_search)
-        is GestureAction.OpenApp -> getString(
-            R.string.action_open_app_named,
-            FavoriteApp(action.intent).resolve(this).label,
-        )
-    }
+    private fun actionSummary(action: GestureAction): CharSequence =
+        when (action) {
+            is GestureAction.None -> getString(R.string.action_none)
+            is GestureAction.OpenSettings -> getString(R.string.action_open_settings)
+            is GestureAction.ShowAppSearch -> getString(R.string.action_show_search)
+            is GestureAction.OpenApp ->
+                getString(
+                    R.string.action_open_app_named,
+                    FavoriteApp(action.intent).resolve(this).label,
+                )
+        }
 
     private fun chooseAction(gesture: Gesture) {
-        val items = arrayOf(
-            getString(R.string.action_none),
-            getString(R.string.action_open_settings),
-            getString(R.string.action_open_app),
-            getString(R.string.action_show_search),
-        )
-        AlertDialog.Builder(this)
+        val items =
+            arrayOf(
+                getString(R.string.action_none),
+                getString(R.string.action_open_settings),
+                getString(R.string.action_open_app),
+                getString(R.string.action_show_search),
+            )
+        AlertDialog
+            .Builder(this)
             .setTitle(R.string.dialog_choose_action)
             .setItems(items) { _, which ->
                 when (which) {
@@ -199,18 +209,21 @@ class LauncherSettingsActivity : Activity() {
                     }
                     3 -> applyGesture(gesture, GestureAction.ShowAppSearch)
                 }
-            }
-            .setNegativeButton(android.R.string.cancel, null)
+            }.setNegativeButton(android.R.string.cancel, null)
             .show()
     }
 
-    private fun applyGesture(gesture: Gesture, action: GestureAction) {
+    private fun applyGesture(
+        gesture: Gesture,
+        action: GestureAction,
+    ) {
         val candidate = LauncherConfig.gestureActions(this).toMutableMap()
         candidate[gesture] = action
 
         // Never allow a state with no way back into these settings.
         if (!LauncherConfig.hasSettingsAccess(candidate.values)) {
-            AlertDialog.Builder(this)
+            AlertDialog
+                .Builder(this)
                 .setTitle(R.string.error_keep_settings_title)
                 .setMessage(R.string.error_keep_settings)
                 .setPositiveButton(android.R.string.ok, null)
@@ -224,16 +237,17 @@ class LauncherSettingsActivity : Activity() {
 
     // ---- Shared helpers --------------------------------------------------
 
-    private fun scrollable(inner: View): View = ScrollView(this).apply {
-        isFillViewport = true
-        addView(
-            inner,
-            ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            ),
-        )
-    }
+    private fun scrollable(inner: View): View =
+        ScrollView(this).apply {
+            isFillViewport = true
+            addView(
+                inner,
+                ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+        }
 
     private companion object {
         private const val STATE_SCREEN = "io.github.aurelia.nlauncher.extra.SCREEN"

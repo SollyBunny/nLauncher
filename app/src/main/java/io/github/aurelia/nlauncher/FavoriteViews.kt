@@ -16,7 +16,6 @@ const val ICON_TEXT_SCALE = 1.8f
  * here, so the preview is guaranteed to look exactly like the real thing.
  */
 object FavoriteViews {
-
     fun create(
         inflater: LayoutInflater,
         parent: ViewGroup?,
