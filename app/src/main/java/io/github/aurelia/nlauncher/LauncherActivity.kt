@@ -26,10 +26,14 @@ class LauncherActivity : Activity() {
     private lateinit var host: FrameLayout
     private lateinit var stack: UiStack
 
-    private lateinit var home: HomeScreen
-    private lateinit var editFavorites: EditFavoritesScreen
-    private lateinit var settings: SettingsScreen
-    private lateinit var gestures: GesturesScreen
+    // Built on first use: a cold start should not pay for screens nobody asked for.
+    private val home by lazy { HomeScreen(this) }
+    private val editFavorites by lazy { EditFavoritesScreen(this) }
+    private val settings by lazy { SettingsScreen(this) }
+    private val gestures by lazy { GesturesScreen(this) }
+
+    /** One search screen, reused, so opening it again costs nothing to build. */
+    private val search by lazy { SearchScreen(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -41,10 +45,6 @@ class LauncherActivity : Activity() {
         // the transparent background, and live wallpapers stay interactive.
         window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WALLPAPER)
 
-        home = HomeScreen(this)
-        editFavorites = EditFavoritesScreen(this)
-        settings = SettingsScreen(this)
-        gestures = GesturesScreen(this)
         stack = UiStack(host)
         registerBackCallback()
 
@@ -108,16 +108,17 @@ class LauncherActivity : Activity() {
      * has closed itself, so the screen the user returns to is the caller again.
      */
     fun openSearch(onPicked: (Intent) -> Unit) {
-        stack.push(SearchScreen(this, onPicked))
+        search.onPicked = onPicked
+        stack.push(search)
     }
 
     fun launch(intent: Intent) {
         try {
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            Log.w(TAG, "No activity to handle $intent", e)
+            Log.w(APP_NAME, "No activity to handle $intent", e)
         } catch (e: SecurityException) {
-            Log.w(TAG, "Not allowed to launch $intent", e)
+            Log.w(APP_NAME, "Not allowed to launch $intent", e)
         }
     }
 
@@ -129,7 +130,7 @@ class LauncherActivity : Activity() {
             SettingsScreen.KEY -> settings
             GesturesScreen.KEY -> gestures
             // A restored search has nobody left to report a pick to.
-            SearchScreen.KEY -> SearchScreen(this) {}
+            SearchScreen.KEY -> search.also { it.onPicked = {} }
             else -> null
         }
 
@@ -153,7 +154,6 @@ class LauncherActivity : Activity() {
     }
 
     private companion object {
-        private const val TAG = "nLauncher"
         private const val STATE_STACK = "io.github.aurelia.nlauncher.extra.STACK"
     }
 }

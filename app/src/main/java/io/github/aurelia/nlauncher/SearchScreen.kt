@@ -1,14 +1,8 @@
 package io.github.aurelia.nlauncher
 
 import android.app.Activity
-import android.content.BroadcastReceiver
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.IntentFilter
 import android.graphics.Typeface
-import android.graphics.drawable.Drawable
-import android.os.Build
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -35,25 +29,33 @@ import kotlin.math.roundToInt
  */
 class SearchScreen(
     private val activity: LauncherActivity,
-    private val onPicked: (Intent) -> Unit,
 ) : Screen {
     override val key = KEY
 
     override val view: View = activity.layoutInflater.inflate(R.layout.screen_search, null, false)
 
+    /**
+     * Called with the app the user picked. Set by whoever pushes the screen; a search
+     * that was restored with the stack has nobody left to report to.
+     */
+    var onPicked: (Intent) -> Unit = {}
+
     private val searchInput: EditText = view.findViewById(R.id.search_input)
     private val listContainer: FrameLayout = view.findViewById(R.id.list_container)
     private val letterBar = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
 
-    /** The index cells, so scrolling can restyle the one letter the list is at. */
+    /** Every index cell, built once; the filter hides the ones it has no results for. */
     private val letterCells = mutableMapOf<Char, TextView>()
+    private val letterColumns = mutableListOf<LinearLayout>()
+    private var letterCellSize = 0
     private var highlighted: Char? = null
 
     private var adapter: Adapter? = null
     private var listView: ListView? = null
 
     init {
-        val apps = apps(activity)
+        // The apps are listed once; their icons keep arriving in the background.
+        val apps = AppCatalog.apps(activity) { adapter?.notifyDataSetChanged() }
         if (apps.isEmpty()) {
             // Nothing to pick: say so, and leave this screen behind again as soon as
             // the stack has finished pushing it.
@@ -66,15 +68,17 @@ class SearchScreen(
 
     override fun onActivated() {
         if (adapter == null) return
+        // Every visit starts a fresh search.
+        searchInput.setText("")
         searchInput.requestFocus()
-        searchInput.setSelection(searchInput.text.length)
+        searchInput.setSelection(0)
         view.post {
             // Searching is the whole point of this screen: bring the keyboard up.
             activity.getSystemService(InputMethodManager::class.java)
                 ?.showSoftInput(searchInput, 0)
-            // The list container is measured only once this screen is laid out; size
-            // the index cells against the real height now that it is known.
-            listContainer.post { rebuildLetterBar() }
+            // The list container is measured only once this screen is laid out, so the
+            // index cells can only be sized against the real height from here on.
+            sizeLetterCells()
         }
     }
 
@@ -83,7 +87,7 @@ class SearchScreen(
             ?.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
-    private fun build(apps: List<AppEntry>) {
+    private fun build(apps: List<AppCatalog.AppEntry>) {
         // Keep the results clear of the navigation bar.
         listContainer.setPaddingRelative(0, 0, 0, navigationBarHeight(activity))
 
@@ -116,10 +120,6 @@ class SearchScreen(
                 Gravity.TOP or Gravity.START,
             ),
         )
-
-        // A-Z index: one tappable cell per available letter, laid out in two columns
-        // against the top-left corner with no gaps between them. Tapping a cell jumps
-        // the list to the first app starting with that letter.
         row.addView(
             letterBar,
             LinearLayout.LayoutParams(
@@ -133,7 +133,9 @@ class SearchScreen(
         // belongs to is the highlighted one.
         results.setOnScrollChangeListener { _, _, _, _, _ -> highlightVisibleLetter() }
 
-        rebuildLetterBar()
+        buildLetterBar()
+        updateLetters()
+        highlightVisibleLetter()
 
         searchInput.addTextChangedListener(
             object : TextWatcher {
@@ -153,7 +155,8 @@ class SearchScreen(
                     rows.filter(s?.toString().orEmpty())
                     // A new query means a new result set: show it from the top.
                     listView?.setSelection(0)
-                    rebuildLetterBar()
+                    updateLetters()
+                    highlightVisibleLetter()
                 }
 
                 override fun afterTextChanged(s: Editable?) {}
@@ -161,29 +164,17 @@ class SearchScreen(
         )
     }
 
-    private fun rebuildLetterBar() {
-        val adapter = this.adapter ?: return
-        letterBar.removeAllViews()
+    /**
+     * Every letter the index can show, built once in two columns against the top-left
+     * corner. Filtering hides cells rather than rebuilding them, so typing stays
+     * allocation free.
+     */
+    private fun buildLetterBar() {
+        val perColumn = (ALL_LETTERS.size + 1) / 2
+        val placeholder = (LETTER_CELL_PLACEHOLDER_DP * activity.resources.displayMetrics.density).roundToInt()
         letterCells.clear()
-        val letters = adapter.letters()
-        if (letters.isEmpty()) return
-        val density = activity.resources.displayMetrics.density
-        val preferred = (22 * density).roundToInt()
-        // Give every cell an equal share of the available height, sized for the
-        // worst case of a full alphabet plus '#' (26 + 1). Two columns then hold
-        // the letters, so with a full alphabet each column takes roughly half the
-        // available height. Using the maximum rather than the current letter count
-        // keeps the cells a stable size as the filtered letter set changes. Before
-        // the first layout the height is unknown, so fall back to the preferred
-        // size (a follow-up rebuild runs once the container is measured).
-        val available = listContainer.height - listContainer.paddingBottom
-        val cell = if (available > 0) available / (26 + 1) else preferred
-        // Fill the first column before the second so the letters stay in order
-        // reading down, then across.
-        val perColumn = (letters.size + 1) / 2
-        val columns = listOf(letters.take(perColumn), letters.drop(perColumn))
-        for (columnLetters in columns) {
-            if (columnLetters.isEmpty()) continue
+        letterColumns.clear()
+        for (columnLetters in ALL_LETTERS.chunked(perColumn)) {
             val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
             for (letter in columnLetters) {
                 val cellView = TextView(activity)
@@ -191,21 +182,43 @@ class SearchScreen(
                 cellView.textSize = LETTER_TEXT_SIZE
                 cellView.gravity = Gravity.CENTER
                 cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-                cellView.setOnClickListener {
-                    val position = adapter.indexOfLetter(letter)
-                    if (position >= 0) listView?.setSelection(position)
-                }
+                cellView.setOnClickListener { jumpTo(letter) }
+                cellView.visibility = View.GONE
                 letterCells[letter] = cellView
-                column.addView(cellView, LinearLayout.LayoutParams(cell, cell))
+                column.addView(cellView, LinearLayout.LayoutParams(placeholder, placeholder))
             }
-            letterBar.addView(
-                column,
-                LinearLayout.LayoutParams(cell, ViewGroup.LayoutParams.WRAP_CONTENT),
-            )
+            letterColumns += column
+            letterBar.addView(column, LinearLayout.LayoutParams(placeholder, ViewGroup.LayoutParams.WRAP_CONTENT))
         }
-        // The cells are new, so style them for where the list currently is.
-        highlighted = null
-        highlightVisibleLetter()
+    }
+
+    /**
+     * Give every cell an equal share of the available height. The worst case is a full
+     * alphabet plus '#' (26 + 1), so that is what each cell is sized against: the index
+     * keeps its proportions as the filter changes which letters are showing. Before the
+     * first layout the height is unknown, so the cells keep their placeholder size until
+     * [sizeLetterCells] can do better.
+     */
+    private fun sizeLetterCells() {
+        val available = listContainer.height - listContainer.paddingBottom
+        if (available <= 0) return
+        val cell = available / ALL_LETTERS.size
+        if (cell == letterCellSize) return
+        letterCellSize = cell
+        for (cellView in letterCells.values) {
+            cellView.layoutParams = LinearLayout.LayoutParams(cell, cell)
+        }
+        for (column in letterColumns) {
+            column.layoutParams = LinearLayout.LayoutParams(cell, ViewGroup.LayoutParams.WRAP_CONTENT)
+        }
+    }
+
+    /** Show the letters the current results actually have, and hide the rest. */
+    private fun updateLetters() {
+        val shown = adapter?.letters()?.toSet().orEmpty()
+        for ((letter, cellView) in letterCells) {
+            cellView.visibility = if (letter in shown) View.VISIBLE else View.GONE
+        }
     }
 
     /**
@@ -217,7 +230,7 @@ class SearchScreen(
         val adapter = this.adapter ?: return
         val position = listView?.firstVisiblePosition ?: return
         if (position < 0 || position >= adapter.count) return
-        val label = (adapter.getItem(position) as AppEntry).label
+        val label = (adapter.getItem(position) as AppCatalog.AppEntry).label
         val letter = label.firstOrNull()?.lowercaseChar()?.takeIf { it.isLetter() } ?: '#'
         if (letter == highlighted) return
         highlighted = letter
@@ -230,24 +243,23 @@ class SearchScreen(
         }
     }
 
+    private fun jumpTo(letter: Char) {
+        val position = adapter?.indexOfLetter(letter) ?: return
+        if (position >= 0) listView?.setSelection(position)
+    }
+
     /** Close this screen and hand the picked app to whoever opened the search. */
     private fun pick(intent: Intent) {
         activity.back()
         onPicked(intent)
     }
 
-    private class AppEntry(
-        val label: String,
-        val icon: Drawable,
-        val intent: Intent,
-    )
-
     private class Adapter(
         private val activity: Activity,
-        private val all: List<AppEntry>,
-        private val onPick: (AppEntry) -> Unit,
+        private val all: List<AppCatalog.AppEntry>,
+        private val onPick: (AppCatalog.AppEntry) -> Unit,
     ) : BaseAdapter() {
-        private var shown: List<AppEntry> = all
+        private var shown: List<AppCatalog.AppEntry> = all
 
         /** Distinct index labels: '#' first (labels not starting with a letter), then a-z. */
         fun letters(): List<Char> {
@@ -295,7 +307,9 @@ class SearchScreen(
             val entry = shown[position]
             val icon = view.findViewById<ImageView>(R.id.app_choice_icon)
             val label = view.findViewById<TextView>(R.id.app_choice_label)
-            icon.setImageDrawable(entry.icon)
+            // The icon may still be loading in the background; the list refreshes
+            // itself once they have all landed.
+            icon.setImageDrawable(AppCatalog.icon(activity, entry))
             label.text = entry.label
             label.textSize = APP_LABEL_TEXT_SIZE
 
@@ -321,63 +335,11 @@ class SearchScreen(
         /** Text size (sp) of the A-Z index letters down the side of the picker. */
         private const val LETTER_TEXT_SIZE = 16f
 
-        // The app list (labels, icons and intents) is built once and kept in memory for
-        // the life of the process: opening the search is then cheap, and the list is
-        // refreshed whenever packages are installed, removed or changed.
-        private var cachedApps: List<AppEntry>? = null
-        private var watchingPackages = false
+        /** Cell size (dp) before the screen has been laid out and can be measured. */
+        private const val LETTER_CELL_PLACEHOLDER_DP = 22
 
-        private fun apps(context: Context): List<AppEntry> {
-            cachedApps?.let { return it }
-            val pm = context.packageManager
-            val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            val loaded =
-                pm.queryIntentActivities(main, 0)
-                    .asSequence()
-                    .map { it.activityInfo }
-                    // Keep the launcher's own home activity out of the picker list.
-                    .filter { it.packageName != context.packageName }
-                    .distinctBy { it.packageName to it.name }
-                    .map {
-                        AppEntry(
-                            label = it.loadLabel(pm).toString(),
-                            icon = it.loadIcon(pm),
-                            intent =
-                                Intent(Intent.ACTION_MAIN)
-                                    .addCategory(Intent.CATEGORY_LAUNCHER)
-                                    .setComponent(ComponentName(it.packageName, it.name)),
-                        )
-                    }.sortedBy { it.label.lowercase() }
-                    .toList()
-            cachedApps = loaded
-            watchPackages(context.applicationContext)
-            return loaded
-        }
-
-        /** Invalidate the cached app list when apps are installed, removed or changed. */
-        private fun watchPackages(context: Context) {
-            if (watchingPackages) return
-            watchingPackages = true
-            val filter =
-                IntentFilter().apply {
-                    addAction(Intent.ACTION_PACKAGE_ADDED)
-                    addAction(Intent.ACTION_PACKAGE_REMOVED)
-                    addAction(Intent.ACTION_PACKAGE_CHANGED)
-                    addAction(Intent.ACTION_PACKAGE_REPLACED)
-                    addDataScheme("package")
-                }
-            val receiver =
-                object : BroadcastReceiver() {
-                    override fun onReceive(context: Context?, intent: Intent?) {
-                        cachedApps = null
-                    }
-                }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-            } else {
-                context.registerReceiver(receiver, filter)
-            }
-        }
+        /** Every letter the index can show: '#' for non-letters, then the alphabet. */
+        private val ALL_LETTERS: List<Char> = listOf('#') + ('a'..'z').toList()
 
         private fun statusBarHeight(activity: Activity): Int {
             val res = activity.resources

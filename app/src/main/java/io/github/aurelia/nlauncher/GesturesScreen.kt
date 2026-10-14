@@ -64,7 +64,7 @@ class GesturesScreen(
             is GestureAction.OpenApp ->
                 activity.getString(
                     R.string.action_open_app_named,
-                    FavoriteApp(action.intent).resolve(activity).label,
+                    Favorites.label(activity, FavoriteApp(action.intent)),
                 )
         }
 

@@ -60,6 +60,12 @@ object LauncherConfig {
     private const val PREFS = "nlauncher"
     private const val KEY_FAVORITES = "favorites"
 
+    // Parsing a stored favorite means an Intent.parseUri per entry, and the launcher
+    // asks for them on every Home press, so the parsed list is kept against the exact
+    // text it came from.
+    private var parsedRaw: String? = null
+    private var parsedFavorites: List<FavoriteApp> = emptyList()
+
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     private fun defaultFavorites() = listOf(FavoriteApp(Intent(Settings.ACTION_SETTINGS)))
@@ -71,13 +77,16 @@ object LauncherConfig {
      */
     fun favorites(context: Context): List<FavoriteApp> {
         val raw = prefs(context).getString(KEY_FAVORITES, null) ?: return defaultFavorites()
-        return raw
-            .split('\n')
-            .filter { it.isNotBlank() }
-            .mapNotNull { line ->
-                runCatching { FavoriteApp(Intent.parseUri(line, Intent.URI_INTENT_SCHEME)) }
-                    .getOrNull()
-            }
+        if (raw == parsedRaw) return parsedFavorites
+        parsedFavorites =
+            raw.split('\n')
+                .filter { it.isNotBlank() }
+                .mapNotNull { line ->
+                    runCatching { FavoriteApp(Intent.parseUri(line, Intent.URI_INTENT_SCHEME)) }
+                        .getOrNull()
+                }
+        parsedRaw = raw
+        return parsedFavorites
     }
 
     fun saveFavorites(

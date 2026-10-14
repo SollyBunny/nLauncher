@@ -48,6 +48,7 @@ class UiStack(
 
     /** Show [screen] on top of the current one, taking the current one off the host. */
     fun push(screen: Screen) {
+        if (top === screen) return
         deactivate(screens.lastOrNull())
         screens.add(screen)
         attach(screen)
@@ -68,9 +69,7 @@ class UiStack(
 
     /** Return to the home screen, dropping everything stacked above it. */
     fun popToHome() {
-        while (pop()) {
-            // Keep popping until only the home screen is left.
-        }
+        while (screens.size > 1) pop()
     }
 
     /** Put [screen] on the host and let it know it is the active one. */

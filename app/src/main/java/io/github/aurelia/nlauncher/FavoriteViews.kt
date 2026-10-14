@@ -25,12 +25,14 @@ object FavoriteViews {
         favorite: FavoriteApp,
         context: Context,
     ): View {
-        val resolved = favorite.resolve(context)
         val view = inflater.inflate(R.layout.item_favorite, parent, false)
         val icon = view.findViewById<ImageView>(R.id.favorite_icon)
         val label = view.findViewById<TextView>(R.id.favorite_label)
-        icon.setImageDrawable(resolved.icon)
-        label.text = resolved.label
+
+        // Remember which app the row is for, so an icon that arrives late does not
+        // land on a row that has meanwhile been rebuilt for another one.
+        icon.tag = favorite.key
+        label.text = Favorites.label(context, favorite)
         label.textSize = APP_LABEL_TEXT_SIZE
 
         // Icons sit at ICON_TEXT_SCALE times the label's text size.
@@ -41,6 +43,14 @@ object FavoriteViews {
             params.height = size
             icon.layoutParams = params
         }
+
+        // The icon may still be loading in the background: draw what there is now and
+        // let the callback fill the row in when it lands.
+        icon.setImageDrawable(
+            Favorites.icon(context, favorite) { loaded ->
+                if (icon.tag == favorite.key) icon.setImageDrawable(loaded)
+            },
+        )
         return view
     }
 }

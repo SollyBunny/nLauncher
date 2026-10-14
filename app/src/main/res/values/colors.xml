@@ -1,9 +1,6 @@
 <resources>
     <color name="settings_background">#FF101418</color>
 
-    <color name="tab_selected">#FFFFFFFF</color>
-    <color name="tab_unselected">#8AFFFFFF</color>
-
     <color name="text_primary">#FFFFFFFF</color>
     <color name="text_secondary">#B3FFFFFF</color>
 

@@ -173,14 +173,13 @@ class HomeScreen(
             )
         } catch (e: Exception) {
             // No live wallpaper is listening; nothing to do, but keep the reason.
-            Log.d(TAG, "Wallpaper command failed", e)
+            Log.d(APP_NAME, "Wallpaper command failed", e)
         }
     }
 
     companion object {
         const val KEY = "home"
 
-        private const val TAG = "nLauncher"
         private const val CLOCK_TICK_MS = 60_000L
         private const val SWIPE_MIN_DP = 48f
         private const val BAR_PADDING_DP = 12f
