@@ -7,33 +7,12 @@
     </style>
 
     <!--
-        The home screen: fully transparent so the system wallpaper (static or live)
-        shows through, with FLAG_SHOW_WALLPAPER so the platform also forwards touch
-        events to the live wallpaper for interactivity.
+        The launcher, and every screen in it: fully transparent so the system wallpaper
+        (static or live) shows through, with FLAG_SHOW_WALLPAPER (set in code too) so
+        the platform also forwards touch events to the live wallpaper for
+        interactivity. Screens that need an opaque background paint their own.
     -->
     <style name="Theme.Mlauncherish.Launcher" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowShowWallpaper">true</item>
-        <item name="android:windowBackground">@android:color/transparent</item>
-        <item name="android:colorBackgroundCacheHint">@null</item>
-        <item name="android:windowContentOverlay">@null</item>
-        <item name="android:windowNoTitle">true</item>
-        <item name="android:windowTranslucentStatus">true</item>
-        <item name="android:windowTranslucentNavigation">true</item>
-        <item name="android:statusBarColor">@android:color/transparent</item>
-        <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
-        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-        <item name="android:windowAnimationStyle">@null</item>
-    </style>
-
-    <style name="Theme.Mlauncherish.Settings" parent="Theme.Mlauncherish">
-        <item name="android:windowBackground">@color/settings_background</item>
-        <item name="android:statusBarColor">@color/settings_background</item>
-        <item name="android:navigationBarColor">@color/settings_background</item>
-    </style>
-
-    <!-- Full-screen app search picker: same deal as the home screen, wallpaper behind. -->
-    <style name="Theme.Mlauncherish.Search" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:colorBackgroundCacheHint">@null</item>

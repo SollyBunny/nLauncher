@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    The settings screens (the menu and the gesture bindings) share this layout: an
+    opaque header over a content panel they fill themselves. Opaque, so the wallpaper
+    stays covered while the user is in the settings.
+-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/settings_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/settings_background"
-    android:fitsSystemWindows="true"
     android:orientation="vertical">
 
     <LinearLayout

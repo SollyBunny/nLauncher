@@ -15,8 +15,8 @@ const val APP_LABEL_TEXT_SIZE = 16f
 const val ICON_TEXT_SCALE = 1.8f
 
 /**
- * Builds a favorite row. The home screen and the settings preview both go through
- * here, so the preview is guaranteed to look exactly like the real thing.
+ * Builds a favorite row. The home screen and the editor's preview both go through
+ * here, so the row being edited is guaranteed to look exactly like the real one.
  */
 object FavoriteViews {
     fun create(

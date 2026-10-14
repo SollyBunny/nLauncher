@@ -1,91 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    The launcher's only layout: a transparent host frame that the UiStack fills with
+    one screen at a time. Every screen brings its own layout (screen_*.xml); see
+    UiStack.kt. Because this window is transparent and carries FLAG_SHOW_WALLPAPER,
+    whatever a screen does not paint shows the system wallpaper.
+-->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent">
-
-    <!-- Favorites live in the bottom-left corner and grow upwards. -->
-    <LinearLayout
-        android:id="@+id/favorites"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="bottom|start"
-        android:orientation="vertical"
-        android:paddingStart="8dp"
-        android:paddingEnd="8dp"
-        android:paddingBottom="8dp" />
-
-    <!-- Top-left column: the time. -->
-    <LinearLayout
-        android:id="@+id/top_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top|start"
-        android:orientation="vertical"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp">
-
-        <TextView
-            android:id="@+id/clock"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:shadowColor="#99000000"
-            android:shadowDx="1"
-            android:shadowDy="1"
-            android:shadowRadius="3"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-    <!-- Shown only in edit mode: the title plus the way out. -->
-    <LinearLayout
-        android:id="@+id/edit_bar"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingStart="16dp"
-        android:paddingEnd="8dp"
-        android:paddingTop="12dp"
-        android:paddingBottom="8dp"
-        android:visibility="gone">
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:shadowColor="#99000000"
-            android:shadowDx="1"
-            android:shadowDy="1"
-            android:shadowRadius="3"
-            android:text="@string/edit_favorites"
-            android:textColor="@color/text_primary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <TextView
-            android:id="@+id/edit_done"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:background="?android:attr/selectableItemBackground"
-            android:clickable="true"
-            android:focusable="true"
-            android:paddingStart="20dp"
-            android:paddingEnd="20dp"
-            android:paddingTop="12dp"
-            android:paddingBottom="12dp"
-            android:shadowColor="#99000000"
-            android:shadowDx="1"
-            android:shadowDy="1"
-            android:shadowRadius="3"
-            android:text="@string/done"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:textStyle="bold" />
-
-    </LinearLayout>
-
-</FrameLayout>
+    android:background="@android:color/transparent" />
