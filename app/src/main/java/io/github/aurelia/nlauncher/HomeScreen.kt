@@ -7,6 +7,8 @@ import android.text.format.DateFormat
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
+import android.view.VelocityTracker
+import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -39,6 +41,16 @@ class HomeScreen(
     private val gestures: GestureDetector
 
     private val swipeMinDistance: Float by lazy { SWIPE_MIN_DP * activity.resources.displayMetrics.density }
+    private val minFlingVelocity: Float by lazy { ViewConfiguration.get(activity).scaledMinimumFlingVelocity.toFloat() }
+    private val touchSlop: Float by lazy { ViewConfiguration.get(activity).scaledTouchSlop.toFloat() }
+
+    /** Follows the finger so a short, fast flick still counts as a swipe. */
+    private val velocity = VelocityTracker.obtain()
+    private var touchStartX = 0f
+    private var touchStartY = 0f
+
+    /** Set once a gesture has fired, so one touch can only ever trigger one action. */
+    private var gestureFired = false
 
     private val clockHandler = Handler(Looper.getMainLooper())
     private var clockTicking = false
@@ -70,28 +82,14 @@ class HomeScreen(
                     }
 
                     override fun onLongPress(e: MotionEvent) {
+                        gestureFired = true
                         trigger(Gesture.HOLD)
                     }
 
-                    override fun onFling(
-                        e1: MotionEvent?,
-                        e2: MotionEvent,
-                        velocityX: Float,
-                        velocityY: Float,
-                    ): Boolean {
-                        val start = e1 ?: return false
-                        val dx = e2.x - start.x
-                        val dy = e2.y - start.y
-                        if (abs(dx) < swipeMinDistance && abs(dy) < swipeMinDistance) return false
-                        val gesture =
-                            if (abs(dx) > abs(dy)) {
-                                if (dx > 0) Gesture.SWIPE_RIGHT else Gesture.SWIPE_LEFT
-                            } else {
-                                if (dy > 0) Gesture.SWIPE_DOWN else Gesture.SWIPE_UP
-                            }
-                        trigger(gesture)
-                        return true
-                    }
+                    // No onFling: a fling needs the finger to be moving fast at the
+                    // moment it is released, so it missed deliberate swipes and read a
+                    // slow one as nothing. The direction is worked out from where the
+                    // finger ended up instead — see trackSwipe().
                 },
             )
 
@@ -99,6 +97,7 @@ class HomeScreen(
         // what keeps the gestures off the favorites themselves.
         view.setOnTouchListener { _, event ->
             gestures.onTouchEvent(event)
+            trackSwipe(event)
             true
         }
 
@@ -155,6 +154,63 @@ class HomeScreen(
             is GestureAction.OpenApp -> activity.launch(action.intent)
         }
     }
+
+    /**
+     * Works out a swipe from where the finger ended up, rather than from how fast it
+     * was moving when it was let go. A swipe counts once it has travelled far enough,
+     * however slowly it was made and whatever the finger did in between: pausing
+     * halfway, or hanging on at the end for a few seconds, no longer turns a swipe
+     * into a hold (the [GestureDetector] drops the long press as soon as the finger
+     * moves) or into nothing at all. A short throw still counts too, since that is a
+     * swipe too.
+     */
+    private fun trackSwipe(event: MotionEvent) {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                gestureFired = false
+                touchStartX = event.x
+                touchStartY = event.y
+                velocity.clear()
+                velocity.addMovement(event)
+            }
+            MotionEvent.ACTION_MOVE -> velocity.addMovement(event)
+            MotionEvent.ACTION_UP -> {
+                velocity.addMovement(event)
+                if (!gestureFired) {
+                    velocity.computeCurrentVelocity(1000)
+                    val dx = event.x - touchStartX
+                    val dy = event.y - touchStartY
+                    if (isSwipe(dx, dy) || isFlick(dx, dy)) trigger(direction(dx, dy))
+                }
+                velocity.clear()
+            }
+            MotionEvent.ACTION_CANCEL -> velocity.clear()
+        }
+    }
+
+    /** Far enough to be a deliberate swipe, on whichever axis it went down. */
+    private fun isSwipe(
+        dx: Float,
+        dy: Float,
+    ): Boolean = maxOf(abs(dx), abs(dy)) >= swipeMinDistance
+
+    /** Too short to be deliberate, but thrown fast enough to mean it anyway. */
+    private fun isFlick(
+        dx: Float,
+        dy: Float,
+    ): Boolean =
+        maxOf(abs(velocity.xVelocity), abs(velocity.yVelocity)) >= minFlingVelocity &&
+            maxOf(abs(dx), abs(dy)) > touchSlop
+
+    private fun direction(
+        dx: Float,
+        dy: Float,
+    ): Gesture =
+        if (abs(dx) > abs(dy)) {
+            if (dx > 0) Gesture.SWIPE_RIGHT else Gesture.SWIPE_LEFT
+        } else {
+            if (dy > 0) Gesture.SWIPE_DOWN else Gesture.SWIPE_UP
+        }
 
     private fun forwardTapToWallpaper(
         x: Float,
