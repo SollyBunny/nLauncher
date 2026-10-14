@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.text.Editable
@@ -43,6 +44,10 @@ class SearchScreen(
     private val searchInput: EditText = view.findViewById(R.id.search_input)
     private val listContainer: FrameLayout = view.findViewById(R.id.list_container)
     private val letterBar = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
+
+    /** The index cells, so scrolling can restyle the one letter the list is at. */
+    private val letterCells = mutableMapOf<Char, TextView>()
+    private var highlighted: Char? = null
 
     private var adapter: Adapter? = null
     private var listView: ListView? = null
@@ -124,6 +129,10 @@ class SearchScreen(
         )
         row.addView(results, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
 
+        // The index follows the list: whichever letter the topmost visible app
+        // belongs to is the highlighted one.
+        results.setOnScrollChangeListener { _, _, _, _, _ -> highlightVisibleLetter() }
+
         rebuildLetterBar()
 
         searchInput.addTextChangedListener(
@@ -155,6 +164,7 @@ class SearchScreen(
     private fun rebuildLetterBar() {
         val adapter = this.adapter ?: return
         letterBar.removeAllViews()
+        letterCells.clear()
         val letters = adapter.letters()
         if (letters.isEmpty()) return
         val density = activity.resources.displayMetrics.density
@@ -180,17 +190,42 @@ class SearchScreen(
                 cellView.text = letter.uppercaseChar().toString()
                 cellView.textSize = LETTER_TEXT_SIZE
                 cellView.gravity = Gravity.CENTER
-                cellView.setTextColor(activity.getColor(R.color.text_primary))
                 cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
                 cellView.setOnClickListener {
                     val position = adapter.indexOfLetter(letter)
                     if (position >= 0) listView?.setSelection(position)
                 }
+                letterCells[letter] = cellView
                 column.addView(cellView, LinearLayout.LayoutParams(cell, cell))
             }
             letterBar.addView(
                 column,
                 LinearLayout.LayoutParams(cell, ViewGroup.LayoutParams.WRAP_CONTENT),
+            )
+        }
+        // The cells are new, so style them for where the list currently is.
+        highlighted = null
+        highlightVisibleLetter()
+    }
+
+    /**
+     * Mark the letter of the topmost visible app as the current one: bold and in the
+     * primary color, while the other letters stay muted. Nothing happens while the
+     * list is still within the same letter.
+     */
+    private fun highlightVisibleLetter() {
+        val adapter = this.adapter ?: return
+        val position = listView?.firstVisiblePosition ?: return
+        if (position < 0 || position >= adapter.count) return
+        val label = (adapter.getItem(position) as AppEntry).label
+        val letter = label.firstOrNull()?.lowercaseChar()?.takeIf { it.isLetter() } ?: '#'
+        if (letter == highlighted) return
+        highlighted = letter
+        for ((cellLetter, cell) in letterCells) {
+            val current = cellLetter == letter
+            cell.setTypeface(if (current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT)
+            cell.setTextColor(
+                activity.getColor(if (current) R.color.text_primary else R.color.icon_tint_muted),
             )
         }
     }
