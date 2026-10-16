@@ -1,4 +1,4 @@
-package io.github.aurelia.nlauncher
+package io.github.aurelia.nlauncher.ui
 
 import android.content.Context
 import android.view.LayoutInflater
@@ -6,6 +6,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import io.github.aurelia.nlauncher.FavoriteApp
+import io.github.aurelia.nlauncher.Favorites
+import io.github.aurelia.nlauncher.R
 import kotlin.math.roundToInt
 
 /** Text size (sp) of an app's label, everywhere it is shown. */

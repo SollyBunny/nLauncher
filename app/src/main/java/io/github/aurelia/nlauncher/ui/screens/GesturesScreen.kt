@@ -1,10 +1,19 @@
-package io.github.aurelia.nlauncher
+package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.AlertDialog
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import io.github.aurelia.nlauncher.FavoriteApp
+import io.github.aurelia.nlauncher.Favorites
+import io.github.aurelia.nlauncher.Gesture
+import io.github.aurelia.nlauncher.GestureAction
+import io.github.aurelia.nlauncher.LauncherActivity
+import io.github.aurelia.nlauncher.LauncherConfig
+import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.padForSystemBars
 
 /**
  * The gesture bindings, one row per gesture showing the action bound to it. Binding

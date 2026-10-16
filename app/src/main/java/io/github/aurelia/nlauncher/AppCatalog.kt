@@ -39,7 +39,8 @@ object AppCatalog {
         cached?.let { return it }
         val pm = context.packageManager
         val entries =
-            pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
+            pm
+                .queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0)
                 .asSequence()
                 .map { it.activityInfo }
                 // Keep the launcher's own home activity out of the picker list.

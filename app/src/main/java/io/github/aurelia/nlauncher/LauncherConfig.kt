@@ -79,7 +79,8 @@ object LauncherConfig {
         val raw = prefs(context).getString(KEY_FAVORITES, null) ?: return defaultFavorites()
         if (raw == parsedRaw) return parsedFavorites
         parsedFavorites =
-            raw.split('\n')
+            raw
+                .split('\n')
                 .filter { it.isNotBlank() }
                 .mapNotNull { line ->
                     runCatching { FavoriteApp(Intent.parseUri(line, Intent.URI_INTENT_SCHEME)) }

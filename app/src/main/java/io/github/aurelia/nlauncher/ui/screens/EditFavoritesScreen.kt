@@ -1,4 +1,4 @@
-package io.github.aurelia.nlauncher
+package io.github.aurelia.nlauncher.ui.screens
 
 import android.content.Intent
 import android.view.MotionEvent
@@ -8,6 +8,15 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
+import io.github.aurelia.nlauncher.FavoriteApp
+import io.github.aurelia.nlauncher.LauncherActivity
+import io.github.aurelia.nlauncher.LauncherConfig
+import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.FavoriteViews
+import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
+import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.padForSystemBars
 import kotlin.math.roundToInt
 
 /**

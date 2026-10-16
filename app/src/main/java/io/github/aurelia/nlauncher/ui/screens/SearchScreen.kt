@@ -1,4 +1,4 @@
-package io.github.aurelia.nlauncher
+package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.Activity
 import android.content.Intent
@@ -17,6 +17,12 @@ import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.TextView
 import android.widget.Toast
+import io.github.aurelia.nlauncher.AppCatalog
+import io.github.aurelia.nlauncher.LauncherActivity
+import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
+import io.github.aurelia.nlauncher.ui.Screen
 import kotlin.math.roundToInt
 
 /**
@@ -74,7 +80,8 @@ class SearchScreen(
         searchInput.setSelection(0)
         view.post {
             // Searching is the whole point of this screen: bring the keyboard up.
-            activity.getSystemService(InputMethodManager::class.java)
+            activity
+                .getSystemService(InputMethodManager::class.java)
                 ?.showSoftInput(searchInput, 0)
             // The list container is measured only once this screen is laid out, so the
             // index cells can only be sized against the real height from here on.
@@ -83,7 +90,8 @@ class SearchScreen(
     }
 
     override fun onDeactivated() {
-        activity.getSystemService(InputMethodManager::class.java)
+        activity
+            .getSystemService(InputMethodManager::class.java)
             ?.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
@@ -236,7 +244,7 @@ class SearchScreen(
         highlighted = letter
         for ((cellLetter, cell) in letterCells) {
             val current = cellLetter == letter
-            cell.setTypeface(if (current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT)
+            cell.typeface = if (current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
             cell.setTextColor(
                 activity.getColor(if (current) R.color.text_primary else R.color.icon_tint_muted),
             )

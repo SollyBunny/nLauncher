@@ -22,9 +22,10 @@ import java.util.concurrent.RejectedExecutionException
  * thread and hands its result back through the main handler.
  */
 object Icons {
-    private val loader = Executors.newSingleThreadExecutor { task ->
-        Thread(task, "$APP_NAME-icons").apply { isDaemon = true }
-    }
+    private val loader =
+        Executors.newSingleThreadExecutor { task ->
+            Thread(task, "icons").apply { isDaemon = true }
+        }
     private val main = Handler(Looper.getMainLooper())
 
     private val cache = mutableMapOf<String, Drawable>()
@@ -93,7 +94,7 @@ object Icons {
                         loader()
                     } catch (e: Exception) {
                         // A broken icon must not take the whole list down with it.
-                        Log.w(APP_NAME, "Could not load the icon for $key", e)
+                        Log.w("Icons", "Could not load the icon for $key", e)
                         null
                     }
                 main.post { deliver(key, icon) }

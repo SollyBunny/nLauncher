@@ -1,4 +1,4 @@
-package io.github.aurelia.nlauncher
+package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.Activity
 import android.view.View
@@ -7,6 +7,10 @@ import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
+import io.github.aurelia.nlauncher.LauncherActivity
+import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.padForSystemBars
 
 /**
  * The settings menu, a screen on the launcher's stack rather than an activity of its

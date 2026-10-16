@@ -23,7 +23,10 @@ object PackageWatcher {
         val appContext = context.applicationContext
         val created =
             object : BroadcastReceiver() {
-                override fun onReceive(context: Context?, intent: Intent?) {
+                override fun onReceive(
+                    context: Context?,
+                    intent: Intent?,
+                ) {
                     for (callback in callbacks.toList()) callback()
                 }
             }

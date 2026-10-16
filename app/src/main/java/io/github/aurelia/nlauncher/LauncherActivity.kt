@@ -9,6 +9,13 @@ import android.util.Log
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.window.OnBackInvokedDispatcher
+import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.UiStack
+import io.github.aurelia.nlauncher.ui.screens.EditFavoritesScreen
+import io.github.aurelia.nlauncher.ui.screens.GesturesScreen
+import io.github.aurelia.nlauncher.ui.screens.HomeScreen
+import io.github.aurelia.nlauncher.ui.screens.SearchScreen
+import io.github.aurelia.nlauncher.ui.screens.SettingsScreen
 
 /**
  * The launcher, and the only activity it has.
@@ -116,9 +123,9 @@ class LauncherActivity : Activity() {
         try {
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            Log.w(APP_NAME, "No activity to handle $intent", e)
+            Log.w("Launcher", "No activity to handle $intent", e)
         } catch (e: SecurityException) {
-            Log.w(APP_NAME, "Not allowed to launch $intent", e)
+            Log.w("Launcher", "Not allowed to launch $intent", e)
         }
     }
 

@@ -6,6 +6,17 @@ import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 
 /**
+ * An app pinned to the favorites list. Nothing is resolved here — [Favorites] does
+ * that, so the list is not tied to any one ROM and nothing is resolved twice.
+ */
+class FavoriteApp(
+    val intent: Intent,
+) {
+    /** Stable identity for the label and icon caches. */
+    val key: String = intent.toUri(Intent.URI_INTENT_SCHEME)
+}
+
+/**
  * The favorite apps, resolved through the [PackageManager] and then remembered.
  *
  * Labels are cheap enough to look up on the spot, and cost nothing at all the second

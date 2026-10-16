@@ -1,4 +1,4 @@
-package io.github.aurelia.nlauncher
+package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.WallpaperManager
 import android.os.Handler
@@ -12,6 +12,15 @@ import android.view.ViewConfiguration
 import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
+import io.github.aurelia.nlauncher.FavoriteApp
+import io.github.aurelia.nlauncher.Gesture
+import io.github.aurelia.nlauncher.GestureAction
+import io.github.aurelia.nlauncher.LauncherActivity
+import io.github.aurelia.nlauncher.LauncherConfig
+import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.FavoriteViews
+import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.padForSystemBars
 import java.util.Date
 import kotlin.math.abs
 
@@ -229,7 +238,7 @@ class HomeScreen(
             )
         } catch (e: Exception) {
             // No live wallpaper is listening; nothing to do, but keep the reason.
-            Log.d(APP_NAME, "Wallpaper command failed", e)
+            Log.d("Launcher", "Wallpaper command failed", e)
         }
     }
 

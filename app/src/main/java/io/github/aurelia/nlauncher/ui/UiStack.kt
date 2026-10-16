@@ -1,4 +1,4 @@
-package io.github.aurelia.nlauncher
+package io.github.aurelia.nlauncher.ui
 
 import android.os.Build
 import android.view.View
@@ -7,7 +7,7 @@ import android.view.WindowInsets
 
 /**
  * One full-screen UI of the launcher. Every screen owns its own layout and lives in
- * [LauncherActivity]'s window; the [UiStack] keeps exactly one of them on screen, so
+ * [io.github.aurelia.nlauncher.LauncherActivity]'s window; the [UiStack] keeps exactly one of them on screen, so
  * no two screens can ever render at the same time.
  */
 interface Screen {
@@ -31,7 +31,7 @@ interface Screen {
 }
 
 /**
- * The screens [LauncherActivity] shows, most recent on top. The home screen sits at
+ * The screens [io.github.aurelia.nlauncher.LauncherActivity] shows, most recent on top. The home screen sits at
  * the bottom and is never popped, so back always returns to the previous screen and
  * falls through to the platform once only the home screen is left.
  */
