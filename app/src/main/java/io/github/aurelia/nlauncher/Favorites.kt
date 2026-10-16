@@ -62,7 +62,7 @@ object Favorites {
         return resolved?.loadLabel(pm)
             ?: intent.component?.packageName
             ?: intent.action
-            ?: "App"
+            ?: "Unknown App"
     }
 
     private fun watch(context: Context) {
