@@ -1,17 +1,27 @@
 <resources>
     <string name="app_name">nLauncher</string>
 
+    <string name="back">Back</string>
+    <string name="done">Done</string>
+
     <!-- Settings menu / screens -->
     <string name="menu_favorites">Favorite apps</string>
+    <string name="menu_widgets">Widgets</string>
     <string name="menu_gestures">Gestures</string>
-    <string name="back">Back</string>
 
-    <!-- Home screen edit mode -->
+    <!-- Favorites edit -->
     <string name="edit_favorites">Edit favorites</string>
-    <string name="done">Done</string>
     <string name="add_favorite">Add favorite</string>
     <string name="move_app">Move</string>
     <string name="remove_app">Remove</string>
+
+    <!-- Widgets editor -->
+    <string name="edit_widgets">Edit Widgets</string>
+    <string name="add_widget">Add widget</string>
+    <string name="widget_clock">Clock</string>
+    <string name="widget_date">Date</string>
+    <string name="move_widget">Move</string>
+    <string name="remove_widget">Remove</string>
 
     <!-- Gestures screen -->
     <string name="gesture_hold">Hold press</string>

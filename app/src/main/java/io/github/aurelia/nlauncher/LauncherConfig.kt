@@ -59,6 +59,7 @@ sealed class GestureAction {
 object LauncherConfig {
     private const val PREFS = "nlauncher"
     private const val KEY_FAVORITES = "favorites"
+    private const val KEY_WIDGETS = "widgets"
 
     // Parsing a stored favorite means an Intent.parseUri per entry, and the launcher
     // asks for them on every Home press, so the parsed list is kept against the exact
@@ -69,6 +70,8 @@ object LauncherConfig {
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     private fun defaultFavorites() = listOf(FavoriteApp(Intent(Settings.ACTION_SETTINGS)))
+
+    private fun defaultWidgets() = listOf(Widget.CLOCK, Widget.DATE)
 
     /**
      * The stored favorites, in order. An absent preference means "never configured",
@@ -96,6 +99,25 @@ object LauncherConfig {
     ) {
         val raw = favorites.joinToString("\n") { it.intent.toUri(Intent.URI_INTENT_SCHEME) }
         prefs(context).edit().putString(KEY_FAVORITES, raw).apply()
+    }
+
+    /**
+     * The stored widgets, in order. An absent preference means "never configured",
+     * so the default (clock, then date) is used; a preference that is present but
+     * empty means the user deliberately removed every widget. Keys written by a
+     * newer version are dropped rather than crashing this one.
+     */
+    fun widgets(context: Context): List<Widget> {
+        val raw = prefs(context).getString(KEY_WIDGETS, null) ?: return defaultWidgets()
+        return raw.split('\n').filter { it.isNotBlank() }.mapNotNull { Widget.fromKey(it) }
+    }
+
+    fun saveWidgets(
+        context: Context,
+        widgets: List<Widget>,
+    ) {
+        val raw = widgets.joinToString("\n") { it.key }
+        prefs(context).edit().putString(KEY_WIDGETS, raw).apply()
     }
 
     fun gestureActions(context: Context): Map<Gesture, GestureAction> = Gesture.entries.associateWith { gestureAction(context, it) }

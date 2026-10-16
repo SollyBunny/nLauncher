@@ -12,6 +12,7 @@ import android.window.OnBackInvokedDispatcher
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.UiStack
 import io.github.aurelia.nlauncher.ui.screens.EditFavoritesScreen
+import io.github.aurelia.nlauncher.ui.screens.EditWidgetsScreen
 import io.github.aurelia.nlauncher.ui.screens.GesturesScreen
 import io.github.aurelia.nlauncher.ui.screens.HomeScreen
 import io.github.aurelia.nlauncher.ui.screens.SearchScreen
@@ -36,6 +37,7 @@ class LauncherActivity : Activity() {
     // Built on first use: a cold start should not pay for screens nobody asked for.
     private val home by lazy { HomeScreen(this) }
     private val editFavorites by lazy { EditFavoritesScreen(this) }
+    private val editWidgets by lazy { EditWidgetsScreen(this) }
     private val settings by lazy { SettingsScreen(this) }
     private val gestures by lazy { GesturesScreen(this) }
 
@@ -100,6 +102,11 @@ class LauncherActivity : Activity() {
         stack.push(editFavorites)
     }
 
+    /** The editable widgets. */
+    fun pushEditWidgets() {
+        stack.push(editWidgets)
+    }
+
     /** The settings menu. */
     fun pushSettings() {
         stack.push(settings)
@@ -134,6 +141,7 @@ class LauncherActivity : Activity() {
         when (key) {
             HomeScreen.KEY -> home
             EditFavoritesScreen.KEY -> editFavorites
+            EditWidgetsScreen.KEY -> editWidgets
             SettingsScreen.KEY -> settings
             GesturesScreen.KEY -> gestures
             // A restored search has nobody left to report a pick to.

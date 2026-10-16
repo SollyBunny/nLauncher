@@ -3,7 +3,6 @@ package io.github.aurelia.nlauncher.ui.screens
 import android.app.WallpaperManager
 import android.os.Handler
 import android.os.Looper
-import android.text.format.DateFormat
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -18,14 +17,16 @@ import io.github.aurelia.nlauncher.GestureAction
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.Widget
 import io.github.aurelia.nlauncher.ui.FavoriteViews
 import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.padForSystemBars
 import java.util.Date
 import kotlin.math.abs
 
 /**
- * The home screen: the clock with the date under it, the favorites in the
+ * The home screen: the widgets (clock, date, ...) at the top, the favorites in the
  * bottom-left corner and the wallpaper behind them.
  *
  * Gestures live here and nowhere else, so they go quiet as soon as any other screen
@@ -40,8 +41,10 @@ class HomeScreen(
     override val view: FrameLayout = activity.layoutInflater.inflate(R.layout.screen_home, null, false) as FrameLayout
 
     private val favoritesContainer: LinearLayout = view.findViewById(R.id.favorites)
-    private val clock: TextView = view.findViewById(R.id.clock)
-    private val clockDate: TextView = view.findViewById(R.id.clock_date)
+    private val widgetsContainer: LinearLayout = view.findViewById(R.id.widgets)
+
+    /** The widget views currently on screen, in order, so the tick can refresh them. */
+    private val widgetViews = mutableListOf<Pair<Widget, TextView>>()
 
     private val wallpaperManager = WallpaperManager.getInstance(activity)
 
@@ -67,16 +70,13 @@ class HomeScreen(
     private val clockTick =
         object : Runnable {
             override fun run() {
-                updateClock()
+                updateWidgets()
                 // Re-align to the next minute boundary so the time never lags.
                 clockHandler.postDelayed(this, CLOCK_TICK_MS - System.currentTimeMillis() % CLOCK_TICK_MS)
             }
         }
 
     init {
-        clock.textSize = CLOCK_TEXT_SIZE
-        clockDate.textSize = CLOCK_DATE_TEXT_SIZE
-
         gestures =
             GestureDetector(
                 activity,
@@ -112,20 +112,27 @@ class HomeScreen(
             true
         }
 
-        // Keep the favorites clear of the navigation bar, and the clock below the status
-        // bar with its own breathing room on top.
+        // Keep the favorites clear of the navigation bar, and the widgets below the
+        // status bar with their own breathing room on top.
         view.padForSystemBars(topExtraDp = BAR_PADDING_DP)
     }
 
     override fun onActivated() {
         actions = LauncherConfig.gestureActions(activity)
         populateFavorites()
-        updateClock()
+        populateWidgets()
+        updateWidgets()
         // This screen is activated both when it is pushed and when the activity
-        // resumes while it is on top, so only ever start one tick.
-        if (!clockTicking) {
-            clockTicking = true
-            clockHandler.post(clockTick)
+        // resumes while it is on top, so only ever start one tick. Only a clock
+        // needs it: nothing else on the home screen changes by the minute.
+        if (widgetViews.any { it.first == Widget.CLOCK }) {
+            if (!clockTicking) {
+                clockTicking = true
+                clockHandler.post(clockTick)
+            }
+        } else if (clockTicking) {
+            clockTicking = false
+            clockHandler.removeCallbacks(clockTick)
         }
     }
 
@@ -136,11 +143,27 @@ class HomeScreen(
         }
     }
 
-    /** Show the current time and date, honoring the user's locale settings. */
-    private fun updateClock() {
+    /** Rebuild the widget column from the stored order. */
+    private fun populateWidgets() {
+        widgetsContainer.removeAllViews()
+        widgetViews.clear()
+        for (widget in LauncherConfig.widgets(activity)) {
+            val view = WidgetViews.create(activity, widget)
+            widgetsContainer.addView(
+                view,
+                LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                ),
+            )
+            widgetViews.add(widget to view)
+        }
+    }
+
+    /** Refresh every widget on screen; each one formats its own text. */
+    private fun updateWidgets() {
         val now = Date()
-        clock.text = DateFormat.getTimeFormat(activity).format(now)
-        clockDate.text = DateFormat.getDateFormat(activity).format(now)
+        for ((widget, view) in widgetViews) view.text = WidgetViews.text(activity, widget, now)
     }
 
     private fun populateFavorites() {
@@ -252,11 +275,5 @@ class HomeScreen(
         private const val CLOCK_TICK_MS = 60_000L
         private const val SWIPE_MIN_DP = 48f
         private const val BAR_PADDING_DP = 12f
-
-        /** Text size (sp) of the home screen clock. */
-        private const val CLOCK_TEXT_SIZE = 48f
-
-        /** Text size (sp) of the date shown under the clock. */
-        private const val CLOCK_DATE_TEXT_SIZE = 18f
     }
 }
