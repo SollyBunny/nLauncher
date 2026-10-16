@@ -12,10 +12,10 @@ import io.github.aurelia.nlauncher.R
 import kotlin.math.roundToInt
 
 /** Text size (sp) of an app's label, everywhere it is shown. */
-const val APP_LABEL_TEXT_SIZE = 16f
+const val APP_LABEL_TEXT_SIZE = 18f
 
 /** App icons are drawn at this multiple of the label's text size. */
-const val ICON_TEXT_SCALE = 1.8f
+const val ICON_TEXT_SCALE = 2.2f
 
 /**
  * Builds a favorite row. The home screen and the editor's preview both go through
