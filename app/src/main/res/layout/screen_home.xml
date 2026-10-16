@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    The home screen: the clock at the top and the favorites in the bottom-left corner,
-    over whatever the transparent window shows (the wallpaper).
+    The home screen: the clock and date at the top and the favorites in the bottom-left
+    corner, over whatever the transparent window shows (the wallpaper).
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -19,7 +19,7 @@
         android:paddingEnd="8dp"
         android:paddingBottom="8dp" />
 
-    <!-- Top-left column: the time. -->
+    <!-- Top-left column: the time with the date underneath. -->
     <LinearLayout
         android:id="@+id/top_bar"
         android:layout_width="match_parent"
@@ -39,6 +39,16 @@
             android:shadowRadius="3"
             android:textColor="@color/text_primary"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/clock_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:shadowColor="#99000000"
+            android:shadowDx="1"
+            android:shadowDy="1"
+            android:shadowRadius="3"
+            android:textColor="@color/text_primary" />
 
     </LinearLayout>
 

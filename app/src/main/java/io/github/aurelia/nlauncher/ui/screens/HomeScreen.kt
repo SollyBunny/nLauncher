@@ -25,8 +25,8 @@ import java.util.Date
 import kotlin.math.abs
 
 /**
- * The home screen: the clock, the favorites in the bottom-left corner and the
- * wallpaper behind them.
+ * The home screen: the clock with the date under it, the favorites in the
+ * bottom-left corner and the wallpaper behind them.
  *
  * Gestures live here and nowhere else, so they go quiet as soon as any other screen
  * is pushed on top of it — no "edit mode" check needed, since this screen is simply
@@ -41,6 +41,7 @@ class HomeScreen(
 
     private val favoritesContainer: LinearLayout = view.findViewById(R.id.favorites)
     private val clock: TextView = view.findViewById(R.id.clock)
+    private val clockDate: TextView = view.findViewById(R.id.clock_date)
 
     private val wallpaperManager = WallpaperManager.getInstance(activity)
 
@@ -74,6 +75,7 @@ class HomeScreen(
 
     init {
         clock.textSize = CLOCK_TEXT_SIZE
+        clockDate.textSize = CLOCK_DATE_TEXT_SIZE
 
         gestures =
             GestureDetector(
@@ -134,9 +136,11 @@ class HomeScreen(
         }
     }
 
-    /** Show the current time, honoring the user's 12/24-hour setting. */
+    /** Show the current time and date, honoring the user's locale settings. */
     private fun updateClock() {
-        clock.text = DateFormat.getTimeFormat(activity).format(Date())
+        val now = Date()
+        clock.text = DateFormat.getTimeFormat(activity).format(now)
+        clockDate.text = DateFormat.getDateFormat(activity).format(now)
     }
 
     private fun populateFavorites() {
@@ -251,5 +255,8 @@ class HomeScreen(
 
         /** Text size (sp) of the home screen clock. */
         private const val CLOCK_TEXT_SIZE = 48f
+
+        /** Text size (sp) of the date shown under the clock. */
+        private const val CLOCK_DATE_TEXT_SIZE = 18f
     }
 }
