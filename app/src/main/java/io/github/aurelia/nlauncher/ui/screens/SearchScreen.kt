@@ -60,8 +60,18 @@ class SearchScreen(
     private var listView: ListView? = null
 
     init {
-        // The apps are listed once; their icons keep arriving in the background.
-        val apps = AppCatalog.apps(activity) { adapter?.notifyDataSetChanged() }
+        // The list is usually already resolved (the activity asks for it when it
+        // starts); if it is not, build as soon as it arrives. Icons keep streaming
+        // in either way and refresh the rows once they have all landed.
+        AppCatalog.apps(
+            activity,
+            onReady = { apps -> show(apps) },
+            onIconsLoaded = { adapter?.notifyDataSetChanged() },
+        )
+    }
+
+    /** Draw the results, or explain that there is nothing to pick. */
+    private fun show(apps: List<AppCatalog.AppEntry>) {
         if (apps.isEmpty()) {
             // Nothing to pick: say so, and leave this screen behind again as soon as
             // the stack has finished pushing it.
@@ -73,8 +83,9 @@ class SearchScreen(
     }
 
     override fun onActivated() {
-        if (adapter == null) return
-        // Every visit starts a fresh search.
+        // Every visit starts a fresh search. The input does not depend on the app
+        // list, so it is set up even while a very fast first open is still waiting
+        // for the list to arrive.
         searchInput.setText("")
         searchInput.requestFocus()
         searchInput.setSelection(0)
@@ -170,6 +181,18 @@ class SearchScreen(
                 override fun afterTextChanged(s: Editable?) {}
             },
         )
+
+        // A very fast open can beat the list in: the keyboard is already up and the
+        // box may already hold a query, so apply what is typed rather than showing
+        // everything under it.
+        if (searchInput.text.isNotEmpty()) {
+            rows.filter(searchInput.text.toString())
+            updateLetters()
+            highlightVisibleLetter()
+        }
+        // If the screen has been laid out already (the list arrived after the push),
+        // size the index now — the next activation is a long way off.
+        sizeLetterCells()
     }
 
     /**
@@ -208,6 +231,8 @@ class SearchScreen(
      * [sizeLetterCells] can do better.
      */
     private fun sizeLetterCells() {
+        // Nothing to size until the list has been built and with it the cells.
+        if (letterCells.isEmpty()) return
         val available = listContainer.height - listContainer.paddingBottom
         if (available <= 0) return
         val cell = available / ALL_LETTERS.size
