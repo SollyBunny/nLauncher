@@ -4,6 +4,9 @@
     <string name="back">Back</string>
     <string name="done">Done</string>
 
+    <string name="launch_activity_not_found_exception">No activity to handle %1$s</string>
+    <string name="launch_security_exception">Not allowed to launch %1$s</string>
+
     <!-- Settings menu / screens -->
     <string name="menu_favorites">Favorite apps</string>
     <string name="menu_widgets">Widgets</string>

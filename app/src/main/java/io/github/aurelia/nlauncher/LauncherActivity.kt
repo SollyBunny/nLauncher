@@ -5,9 +5,9 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.Toast
 import android.window.OnBackInvokedDispatcher
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.UiStack
@@ -124,7 +124,10 @@ class LauncherActivity : Activity() {
      * App search, [onPicked] is called once an app is selected.
      * If [hideAfter] is false, the search page wont close once an app is selected.
      */
-    fun openSearch(hideAfter: Boolean = true, onPicked: (Intent) -> Unit) {
+    fun openSearch(
+        hideAfter: Boolean = true,
+        onPicked: (Intent) -> Unit,
+    ) {
         if (hideAfter) {
             search.onPicked = {
                 back()
@@ -140,9 +143,9 @@ class LauncherActivity : Activity() {
         try {
             startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            Log.w("Launcher", "No activity to handle $intent", e)
+            Toast.makeText(this, getString(R.string.launch_activity_not_found_exception, intent), Toast.LENGTH_SHORT).show()
         } catch (e: SecurityException) {
-            Log.w("Launcher", "Not allowed to launch $intent", e)
+            Toast.makeText(this, getString(R.string.launch_security_exception, intent), Toast.LENGTH_SHORT).show()
         }
     }
 
