@@ -354,9 +354,18 @@ class SearchScreen(
             val entry = shown[position]
             val icon = view.findViewById<ImageView>(R.id.app_choice_icon)
             val label = view.findViewById<TextView>(R.id.app_choice_label)
-            // The icon may still be loading in the background; the list refreshes
-            // itself once they have all landed.
-            icon.setImageDrawable(AppCatalog.icon(activity, entry))
+            // The row is recycled, so it has to say which app it is showing: an icon
+            // that arrives after the row has moved on to another app must not land on
+            // it. The same guard is what keeps this row honest while it scrolls.
+            icon.tag = entry.key
+            // Draw whatever is cached and let this row fill itself in when its own
+            // icon lands, rather than leaving every row blank until the last icon in
+            // the catalog has arrived.
+            icon.setImageDrawable(
+                AppCatalog.icon(activity, entry) { loaded ->
+                    if (icon.tag == entry.key) icon.setImageDrawable(loaded)
+                },
+            )
             label.text = entry.label
             label.textSize = APP_LABEL_TEXT_SIZE
 

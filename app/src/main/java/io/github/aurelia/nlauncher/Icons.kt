@@ -1,6 +1,7 @@
 package io.github.aurelia.nlauncher
 
 import android.content.Context
+import android.content.res.Resources
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
@@ -28,7 +29,20 @@ object Icons {
         }
     private val main = Handler(Looper.getMainLooper())
 
-    private val cache = mutableMapOf<String, Drawable>()
+    /**
+     * One cached icon, kept only as a source to draw from: a drawable is stateful, and
+     * one instance shared between views ends up drawn as the wrong icon (or not
+     * redrawn at all) as soon as two of them show it. [new] hands out a private copy.
+     */
+    private class Entry(
+        private val resources: Resources,
+        private val state: Drawable.ConstantState?,
+        private val drawable: Drawable,
+    ) {
+        fun new(): Drawable = state?.newDrawable(resources)?.mutate() ?: drawable
+    }
+
+    private val cache = mutableMapOf<String, Entry>()
     private val loading = mutableSetOf<String>()
     private val waiting = mutableMapOf<String, MutableList<(Drawable?) -> Unit>>()
 
@@ -64,7 +78,11 @@ object Icons {
         loader: () -> Drawable?,
         onReady: ((Drawable?) -> Unit)?,
     ): Drawable? {
-        cache[key]?.let { return it.also { icon -> onReady?.invoke(icon) } }
+        cache[key]?.let { entry ->
+            val icon = entry.new()
+            onReady?.invoke(icon)
+            return icon
+        }
         if (key in failed) {
             // Already known to be impossible: answer straight away rather than queue
             // a waiter nobody is going to come back for.
@@ -76,10 +94,21 @@ object Icons {
         return null
     }
 
-    /** Forget every icon, e.g. because a package changed. */
+    /**
+     * Forget every icon, e.g. because a package changed. Loads already on their way
+     * are let go of as well: what they found describes the package as it was *before*
+     * the change, so it must not land in the fresh caches. That is what stops an app
+     * that has just been updated going on showing the icon it had before.
+     */
     fun clear() {
         cache.clear()
         failed.clear()
+        loading.clear()
+        val dropped = waiting.values.flatten()
+        waiting.clear()
+        // Nobody is going to come back for these, but a caller counting down to
+        // something still has to hear that it is not going to happen.
+        dropped.forEach { it(null) }
     }
 
     private fun schedule(
@@ -87,6 +116,9 @@ object Icons {
         key: String,
         loader: () -> Drawable?,
     ) {
+        // Only the resources, never the activity: this runs long after the call that
+        // asked for the icon has gone.
+        val resources = context.applicationContext.resources
         try {
             this.loader.execute {
                 val icon =
@@ -97,7 +129,7 @@ object Icons {
                         Log.w("Icons", "Could not load the icon for $key", e)
                         null
                     }
-                main.post { deliver(key, icon) }
+                main.post { deliver(key, resources, icon) }
             }
         } catch (e: RejectedExecutionException) {
             loading.remove(key)
@@ -108,14 +140,21 @@ object Icons {
     /** Store what came back and hand it to everyone waiting for it. */
     private fun deliver(
         key: String,
+        resources: Resources,
         icon: Drawable?,
     ) {
-        loading.remove(key)
+        // Gone from the set means [clear] ran while this was loading, so the result
+        // belongs to a package that has changed since: dropping it here is what keeps
+        // it out of the caches.
+        if (!loading.remove(key)) return
+        val waiters = waiting.remove(key).orEmpty()
         if (icon == null) {
             failed += key
+            waiters.forEach { it(null) }
         } else {
-            cache[key] = icon
+            val entry = Entry(resources, icon.constantState, icon)
+            cache[key] = entry
+            waiters.forEach { it(entry.new()) }
         }
-        waiting.remove(key)?.forEach { it(icon) }
     }
 }

@@ -83,8 +83,26 @@ object AppCatalog {
         context: Context,
         entry: AppEntry,
     ): Drawable? {
-        val loader = loader(context, entry) ?: return null
-        return Icons.icon(context, entry.key, loader)
+        val load = loader(context, entry) ?: return null
+        return Icons.icon(context, entry.key, load)
+    }
+
+    /**
+     * As above, and [onReady] is called once the icon is there — right away when it
+     * was cached, and with null when it cannot be loaded. A row in a recycling list
+     * wants this rather than waiting for every icon in the catalog to arrive.
+     */
+    fun icon(
+        context: Context,
+        entry: AppEntry,
+        onReady: (Drawable?) -> Unit,
+    ): Drawable? {
+        val load = loader(context, entry)
+        if (load == null) {
+            onReady(null)
+            return null
+        }
+        return Icons.icon(context, entry.key, load, onReady)
     }
 
     // ---- Resolving -------------------------------------------------------
