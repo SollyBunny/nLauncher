@@ -121,11 +121,18 @@ class LauncherActivity : Activity() {
     }
 
     /**
-     * The app search, on top of whatever asked for it. [onPicked] runs once the search
-     * has closed itself, so the screen the user returns to is the caller again.
+     * App search, [onPicked] is called once an app is selected.
+     * If [hideAfter] is false, the search page wont close once an app is selected.
      */
-    fun openSearch(onPicked: (Intent) -> Unit) {
-        search.onPicked = onPicked
+    fun openSearch(hideAfter: Boolean = true, onPicked: (Intent) -> Unit) {
+        if (hideAfter) {
+            search.onPicked = {
+                back()
+                onPicked(it)
+            }
+        } else {
+            search.onPicked = onPicked
+        }
         stack.push(search)
     }
 

@@ -284,9 +284,7 @@ class SearchScreen(
         if (position >= 0) listView?.setSelection(position)
     }
 
-    /** Close this screen and hand the picked app to whoever opened the search. */
     private fun pick(intent: Intent) {
-        activity.back()
         onPicked(intent)
     }
 
@@ -296,9 +294,6 @@ class SearchScreen(
      */
     private fun showAppSettings(entry: AppCatalog.AppEntry) {
         val packageName = entry.intent.component?.packageName ?: return
-        // The search is finished with either way, so leave it behind first: coming
-        // back from the settings lands on the screen that opened the search.
-        activity.back()
         activity.launch(
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
                 .setData(Uri.parse("package:$packageName")),
