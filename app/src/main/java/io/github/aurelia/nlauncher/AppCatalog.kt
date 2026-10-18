@@ -127,7 +127,11 @@ object AppCatalog {
     }
 
     /** Store the resolved list on the main thread and hand it to everyone waiting. */
-    private fun publish(context: Context, entries: List<AppEntry>, started: Int) {
+    private fun publish(
+        context: Context,
+        entries: List<AppEntry>,
+        started: Int,
+    ) {
         building = false
         if (started != generation) {
             // Packages changed while the list was being resolved: resolve it again.
