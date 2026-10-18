@@ -117,7 +117,13 @@ class SearchScreen(
     }
 
     private fun build(apps: List<AppCatalog.AppEntry>) {
-        val rows = Adapter(activity, apps) { entry -> pick(entry.intent) }
+        val rows =
+            Adapter(
+                activity,
+                apps,
+                onPick = { entry -> pick(entry.intent) },
+                onAppSettings = { entry -> showAppSettings(entry) },
+            )
         adapter = rows
         val results = ListView(activity)
         results.divider = null
@@ -284,10 +290,26 @@ class SearchScreen(
         onPicked(intent)
     }
 
+    /**
+     * Long-pressing a result opens that app's own settings page — the same "app
+     * info" screen the system shows for a long press on a launcher icon.
+     */
+    private fun showAppSettings(entry: AppCatalog.AppEntry) {
+        val packageName = entry.intent.component?.packageName ?: return
+        // The search is finished with either way, so leave it behind first: coming
+        // back from the settings lands on the screen that opened the search.
+        activity.back()
+        activity.launch(
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
+                .setData(Uri.parse("package:$packageName")),
+        )
+    }
+
     private class Adapter(
         private val activity: Activity,
         private val all: List<AppCatalog.AppEntry>,
         private val onPick: (AppCatalog.AppEntry) -> Unit,
+        private val onAppSettings: (AppCatalog.AppEntry) -> Unit,
     ) : BaseAdapter() {
         private var shown: List<AppCatalog.AppEntry> = all
 
@@ -346,6 +368,12 @@ class SearchScreen(
             // The row itself is clickable (see item_app_choice.xml), so it consumes
             // the touch and ListView's onItemClick never fires; handle the pick here.
             view.setOnClickListener { onPick(entry) }
+            // Long-press goes to the app's settings page instead, and returning true
+            // keeps it from counting as a pick as well.
+            view.setOnLongClickListener {
+                onAppSettings(entry)
+                true
+            }
 
             // Icons sit at ICON_TEXT_SCALE times the label's text size.
             val size = (label.textSize * ICON_TEXT_SCALE).roundToInt()
