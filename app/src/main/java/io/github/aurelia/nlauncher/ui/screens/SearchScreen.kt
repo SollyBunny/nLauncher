@@ -3,6 +3,8 @@ package io.github.aurelia.nlauncher.ui.screens
 import android.app.Activity
 import android.content.Intent
 import android.graphics.Typeface
+import android.net.Uri
+import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
 import android.view.Gravity
@@ -23,6 +25,7 @@ import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.padForSystemBars
 import kotlin.math.roundToInt
 
 /**
@@ -30,7 +33,8 @@ import kotlin.math.roundToInt
  * screen's search gesture all push it, so there is exactly one implementation.
  *
  * The search bar sits on top and is auto-focused, and the results fill the width next
- * to the A-Z index, filtered as you type. Like the rest of the launcher it paints
+ * to the A-Z index, filtered as you type. Tapping a result picks it; long-pressing
+ * one opens that app's own settings page. Like the rest of the launcher it paints
  * nothing of its own, so the live wallpaper stays visible (and interactive) behind it.
  */
 class SearchScreen(
@@ -68,6 +72,12 @@ class SearchScreen(
             onReady = { apps -> show(apps) },
             onIconsLoaded = { adapter?.notifyDataSetChanged() },
         )
+
+        // Keep the search bar clear of the status bar and the results clear of the
+        // navigation bar, both on the root. Reading the insets the window actually
+        // applied is what keeps this right: the bar's own size is not always what the
+        // window reserved for it, and guessing leaves a gap above the search bar.
+        view.padForSystemBars()
     }
 
     /** Draw the results, or explain that there is nothing to pick. */
@@ -107,9 +117,6 @@ class SearchScreen(
     }
 
     private fun build(apps: List<AppCatalog.AppEntry>) {
-        // Keep the results clear of the navigation bar.
-        listContainer.setPaddingRelative(0, 0, 0, navigationBarHeight(activity))
-
         val rows = Adapter(activity, apps) { entry -> pick(entry.intent) }
         adapter = rows
         val results = ListView(activity)
@@ -117,16 +124,6 @@ class SearchScreen(
         results.dividerHeight = 0
         results.adapter = rows
         listView = results
-
-        // Keep the search bar clear of the status bar. Applied to the whole bar
-        // (icon + input) so they move down together.
-        val searchBar = view.findViewById<View>(R.id.search_bar)
-        searchBar.setPadding(
-            searchBar.paddingLeft,
-            searchBar.paddingTop + statusBarHeight(activity),
-            searchBar.paddingRight,
-            searchBar.paddingBottom,
-        )
 
         // A-Z index on the left, results filling all the remaining width so the
         // app list gets as much room as the screen can spare.
@@ -373,17 +370,5 @@ class SearchScreen(
 
         /** Every letter the index can show: '#' for non-letters, then the alphabet. */
         private val ALL_LETTERS: List<Char> = listOf('#') + ('a'..'z').toList()
-
-        private fun statusBarHeight(activity: Activity): Int {
-            val res = activity.resources
-            val id = res.getIdentifier("status_bar_height", "dimen", "android")
-            return if (id > 0) res.getDimensionPixelSize(id) else 0
-        }
-
-        private fun navigationBarHeight(activity: Activity): Int {
-            val res = activity.resources
-            val id = res.getIdentifier("navigation_bar_height", "dimen", "android")
-            return if (id > 0) res.getDimensionPixelSize(id) else 0
-        }
     }
 }

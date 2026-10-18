@@ -2,7 +2,7 @@
 <!--
     The app search, a screen on the launcher's stack. Paints nothing of its own, so
     the wallpaper shows through it; the search bar and the results keep clear of the
-    system bars (SearchScreen.kt applies those offsets).
+    system bars (padForSystemBars on this root applies those offsets).
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
