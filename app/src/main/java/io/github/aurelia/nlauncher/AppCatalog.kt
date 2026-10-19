@@ -32,9 +32,6 @@ object AppCatalog {
     private var building = false
     private var watching = false
 
-    /** Bumped when packages change, so a list already being resolved is thrown away. */
-    private var generation = 0
-
     /** Told about the list once it has been resolved; one shot per waiter. */
     private val ready = mutableListOf<(List<AppEntry>) -> Unit>()
 
@@ -135,7 +132,7 @@ object AppCatalog {
         // The task works from the application context and the entries alone, so it
         // never holds on to a screen.
         val app = context.applicationContext
-        val started = generation
+        val started = PackageWatcher.revision
         resolver.execute {
             val entries = listApps(app)
             main.post { publish(app, entries, started) }
@@ -171,7 +168,7 @@ object AppCatalog {
         started: Int,
     ) {
         building = false
-        if (started != generation) {
+        if (started != PackageWatcher.revision) {
             // Packages changed while the list was being resolved: resolve it again.
             resolve(context)
             return
@@ -188,7 +185,6 @@ object AppCatalog {
         if (watching) return
         watching = true
         PackageWatcher.onPackagesChanged(context) {
-            generation += 1
             cached = null
         }
     }
