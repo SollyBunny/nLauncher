@@ -27,6 +27,8 @@
     <string name="add_widget">Add widget</string>
     <string name="widget_clock">Clock</string>
     <string name="widget_date">Date</string>
+    <string name="widget_alarm">Alarm</string>
+    <string name="widget_alarm_none">No alarm</string>
     <string name="move_widget">Move</string>
     <string name="remove_widget">Remove</string>
 

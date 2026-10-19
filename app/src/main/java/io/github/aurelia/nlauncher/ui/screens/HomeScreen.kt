@@ -155,9 +155,10 @@ class HomeScreen(
         populateFavorites()
 
         // Only ever one tick, however many times this screen is activated: a push and
-        // the resume that follows it are two activations of the same thing. Only a
-        // clock needs one — nothing else here changes by the minute.
-        if (widgetViews.any { it.first == Widget.CLOCK }) {
+        // the resume that follows it are two activations of the same thing. Only the
+        // clock and the alarm need one — the date does not move by the minute, and
+        // the alarm has to be re-read so it clears once it has gone off.
+        if (widgetViews.any { it.first == Widget.CLOCK || it.first == Widget.ALARM }) {
             if (!clockTicking) {
                 clockTicking = true
                 clockHandler.post(clockTick)

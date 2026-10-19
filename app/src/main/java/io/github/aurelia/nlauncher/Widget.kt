@@ -13,6 +13,7 @@ enum class Widget(
 ) {
     CLOCK("clock"),
     DATE("date"),
+    ALARM("alarm"),
     ;
 
     companion object {
