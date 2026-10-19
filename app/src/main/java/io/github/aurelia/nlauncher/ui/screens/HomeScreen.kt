@@ -20,8 +20,10 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.PackageWatcher
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
+import io.github.aurelia.nlauncher.ui.CLOCK_TICK_MS
 import io.github.aurelia.nlauncher.ui.FavoriteViews
 import io.github.aurelia.nlauncher.ui.GestureSurfaceLayout
+import io.github.aurelia.nlauncher.ui.SWIPE_MIN_DP
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.padForSystemBars
@@ -351,9 +353,5 @@ class HomeScreen(
 
     companion object {
         const val KEY = "home"
-
-        private const val CLOCK_TICK_MS = 60_000L
-        private const val SWIPE_MIN_DP = 48f
-        private const val BAR_PADDING_DP = 12f
     }
 }

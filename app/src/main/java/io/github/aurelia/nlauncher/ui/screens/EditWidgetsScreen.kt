@@ -12,6 +12,7 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
 import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.BAR_PADDING_DP
 import io.github.aurelia.nlauncher.ui.DragToReorder
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
@@ -146,7 +147,5 @@ class EditWidgetsScreen(
 
     companion object {
         const val KEY = "edit_widgets"
-
-        private const val BAR_PADDING_DP = 12f
     }
 }
