@@ -1,6 +1,5 @@
 package io.github.aurelia.nlauncher.ui.screens
 
-import android.app.Activity
 import android.content.Intent
 import android.graphics.Typeface
 import android.net.Uri
@@ -25,7 +24,7 @@ import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
-import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
@@ -52,12 +51,6 @@ class SearchScreen(
 
     override val view: View = activity.layoutInflater.inflate(R.layout.screen_search, null, false)
 
-    /**
-     * Called with the app the user picked. Set by whoever pushes the screen; a search
-     * that was restored with the stack has nobody left to report to.
-     */
-    var onPicked: (Intent) -> Unit = {}
-
     private val searchInput: EditText = view.findViewById(R.id.search_input)
     private val listContainer: FrameLayout = view.findViewById(R.id.list_container)
     private val letterBar =
@@ -67,7 +60,6 @@ class SearchScreen(
 
     /** Every index cell, built once; the filter hides the ones it has no results for. */
     private val letterCells = mutableMapOf<Char, TextView>()
-    private var letterCellSize = 0
     private var highlighted: Char? = null
 
     private var adapter: Adapter? = null
@@ -128,7 +120,6 @@ class SearchScreen(
             Adapter(
                 activity,
                 apps,
-                onPick = { entry -> pick(entry.intent) },
                 onAppSettings = { entry -> showAppSettings(entry) },
             )
         adapter = rows
@@ -217,7 +208,7 @@ class SearchScreen(
         for (letter in ALL_LETTERS) {
             val cellView = TextView(activity)
             cellView.text = letter.uppercaseChar().toString()
-            cellView.textSize = APP_LABEL_TEXT_SIZE
+            cellView.textSize = APP_LABEL_TEXT_SP
             cellView.gravity = Gravity.CENTER
             cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
             cellView.setOnClickListener { jumpTo(letter) }
@@ -272,10 +263,6 @@ class SearchScreen(
         if (position >= 0) listView?.setSelection(position)
     }
 
-    private fun pick(intent: Intent) {
-        onPicked(intent)
-    }
-
     /**
      * Long-pressing a result opens that app's own settings page — the same "app
      * info" screen the system shows for a long press on a launcher icon.
@@ -289,9 +276,8 @@ class SearchScreen(
     }
 
     private class Adapter(
-        private val activity: Activity,
+        private val activity: LauncherActivity,
         private val all: List<AppCatalog.AppEntry>,
-        private val onPick: (AppCatalog.AppEntry) -> Unit,
         private val onAppSettings: (AppCatalog.AppEntry) -> Unit,
     ) : BaseAdapter() {
         private var shown: List<AppCatalog.AppEntry> = all
@@ -349,11 +335,13 @@ class SearchScreen(
                 },
             )
             label.text = entry.label
-            label.textSize = APP_LABEL_TEXT_SIZE
+            label.textSize = APP_LABEL_TEXT_SP
 
             // The row itself is clickable (see item_app_choice.xml), so it consumes
             // the touch and ListView's onItemClick never fires; handle the pick here.
-            view.setOnClickListener { onPick(entry) }
+            view.setOnClickListener {
+                activity.backSearchCompleted(entry.intent)
+            }
             // Long-press goes to the app's settings page instead, and returning true
             // keeps it from counting as a pick as well.
             view.setOnLongClickListener {

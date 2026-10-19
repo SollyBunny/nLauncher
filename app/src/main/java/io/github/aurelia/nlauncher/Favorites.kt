@@ -3,7 +3,6 @@ package io.github.aurelia.nlauncher
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.drawable.Drawable
 
 /**
  * An app pinned to the favorites list. Nothing is resolved here — [Favorites] does

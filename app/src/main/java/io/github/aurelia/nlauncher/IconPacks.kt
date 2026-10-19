@@ -77,19 +77,21 @@ object IconPacks {
 
         val packResources = pm.getResourcesForApplication(pack)
 
-        val mappedName = findMappedIcon(
-            context,
-            packResources,
-            pack,
-            component
-        )
-
-        if (mappedName != null) {
-            val drawable = getPackDrawable(
+        val mappedName =
+            findMappedIcon(
+                context,
                 packResources,
                 pack,
-                mappedName
+                component,
             )
+
+        if (mappedName != null) {
+            val drawable =
+                getPackDrawable(
+                    packResources,
+                    pack,
+                    mappedName,
+                )
 
             if (drawable != null) {
                 return drawable
@@ -123,12 +125,14 @@ object IconPacks {
         fun matchesComponent(value: String?): Boolean {
             if (value == null) return false
 
-            val normalized = value
-                .removePrefix("ComponentInfo{")
-                .removeSuffix("}")
+            val normalized =
+                value
+                    .removePrefix("ComponentInfo{")
+                    .removeSuffix("}")
 
-            val mapped = ComponentName.unflattenFromString(normalized)
-                ?: return false
+            val mapped =
+                ComponentName.unflattenFromString(normalized)
+                    ?: return false
 
             return mapped.packageName == component.packageName &&
                 mapped.className == component.className
@@ -141,15 +145,16 @@ object IconPacks {
                 if (event == XmlPullParser.START_TAG &&
                     parser.name == "item"
                 ) {
-                    val target = parser.getAttributeValue(
-                        null,
-                        "component"
-                    )
+                    val target =
+                        parser.getAttributeValue(
+                            null,
+                            "component",
+                        )
 
                     if (matchesComponent(target)) {
                         return parser.getAttributeValue(
                             null,
-                            "drawable"
+                            "drawable",
                         )
                     }
                 }
@@ -161,11 +166,12 @@ object IconPacks {
         }
 
         // 1. Look in res/xml/appfilter.xml.
-        val xmlId = resources.getIdentifier(
-            "appfilter",
-            "xml",
-            pack
-        )
+        val xmlId =
+            resources.getIdentifier(
+                "appfilter",
+                "xml",
+                pack,
+            )
 
         if (xmlId != 0) {
             try {
@@ -179,10 +185,11 @@ object IconPacks {
 
         // 2. Look in assets/appfilter.xml.
         try {
-            val packContext = context.createPackageContext(
-                pack,
-                Context.CONTEXT_IGNORE_SECURITY
-            )
+            val packContext =
+                context.createPackageContext(
+                    pack,
+                    Context.CONTEXT_IGNORE_SECURITY,
+                )
 
             packContext.assets.open("appfilter.xml").use { stream ->
                 val parser = android.util.Xml.newPullParser()
@@ -204,15 +211,19 @@ object IconPacks {
         pack: String,
         name: String,
     ): Drawable? {
-        val drawableId = resources.getIdentifier(
-            name, "drawable", pack
-        )
+        val drawableId =
+            resources.getIdentifier(
+                name,
+                "drawable",
+                pack,
+            )
 
-        val mipmapId = if (drawableId == 0) {
-            resources.getIdentifier(name, "mipmap", pack)
-        } else {
-            0
-        }
+        val mipmapId =
+            if (drawableId == 0) {
+                resources.getIdentifier(name, "mipmap", pack)
+            } else {
+                0
+            }
 
         val id = if (drawableId != 0) drawableId else mipmapId
 

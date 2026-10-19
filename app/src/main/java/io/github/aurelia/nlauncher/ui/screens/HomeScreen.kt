@@ -20,6 +20,7 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.PackageWatcher
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
+import io.github.aurelia.nlauncher.ui.BAR_PADDING_DP
 import io.github.aurelia.nlauncher.ui.CLOCK_TICK_MS
 import io.github.aurelia.nlauncher.ui.FavoriteViews
 import io.github.aurelia.nlauncher.ui.GestureSurfaceLayout
@@ -176,6 +177,10 @@ class HomeScreen(
         velocity.recycle()
     }
 
+    override fun onSearchCompleted(intent: Intent) {
+        activity.launch(intent)
+    }
+
     /** Rebuild the widget column from the stored order. */
     private fun populateWidgets() {
         widgetsContainer.removeAllViews()
@@ -248,7 +253,7 @@ class HomeScreen(
         when (val action = actions[gesture] ?: GestureAction.None) {
             is GestureAction.None -> Unit
             is GestureAction.OpenSettings -> activity.pushSettings()
-            is GestureAction.ShowAppSearch -> activity.openSearch(false) { activity.launch(it) }
+            is GestureAction.ShowAppSearch -> activity.pushSearch()
             is GestureAction.OpenApp -> activity.launch(action.intent)
         }
     }

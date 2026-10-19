@@ -1,5 +1,6 @@
 package io.github.aurelia.nlauncher.ui
 
+import android.content.Intent
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
@@ -34,6 +35,11 @@ interface Screen {
      * anything that outlives it (native resources, callbacks into a dying screen).
      */
     fun onDestroyed() {}
+
+    /**
+     * The search menu returned to this page
+     */
+    fun onSearchCompleted(intent: Intent) {}
 }
 
 /**
@@ -46,15 +52,6 @@ class UiStack(
 ) {
     private val screens = mutableListOf<Screen>()
 
-    /**
-     * The screen that has been told it is the active one, or null while none is.
-     *
-     * This is only ever bookkeeping — it decides who gets *told* about being active,
-     * never which view comes off the host, which is decided by naming the screen in
-     * [push] and [pop]. Keeping the two apart is the whole point: a screen can be
-     * inactive because the activity paused without losing its view, and conflating
-     * the two leaves a screen stuck on the host with nothing left to take it off.
-     */
     private var active: Screen? = null
 
     /** The screen on top of the stack, or null while the activity shows nothing. */
@@ -77,20 +74,11 @@ class UiStack(
      */
     fun pop(): Boolean {
         if (screens.size <= 1) return false
-        // The screen being dropped is named explicitly rather than left to [active]:
-        // the stack can be changed while the activity is paused, and then there is no
-        // active screen to stop, so its view would never come off the host.
         stop(screens.removeAt(screens.lastIndex))
-        // The screen underneath was taken off when this one was pushed, so it has to
-        // be put back before the user can see it again.
         start(screens.last())
         return true
     }
 
-    /**
-     * Put [stack] back as it was — after a rotation, say. Only the top is shown; the
-     * rest are kept, built and ready, but never attached.
-     */
     fun restore(stack: List<Screen>) {
         stop(top)
         screens.clear()

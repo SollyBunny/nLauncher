@@ -129,57 +129,33 @@ class LauncherActivity : Activity() {
         stack.pop()
     }
 
-    /** The editable favorites. */
+    fun backSearchCompleted(intent: Intent) {
+        stack.pop()
+        stack.top?.onSearchCompleted(intent)
+    }
+
+    fun pushSearch() {
+        stack.push(search)
+    }
+
     fun pushEditFavorites() {
         stack.push(editFavorites)
     }
 
-    /** The editable widgets. */
     fun pushEditWidgets() {
         stack.push(editWidgets)
     }
 
-    /** The settings menu. */
     fun pushSettings() {
         stack.push(settings)
     }
 
-    /** The gesture bindings. */
     fun pushGestures() {
         stack.push(gestures)
     }
 
-    /** The settings that change how the launcher looks. */
     fun pushLookAndFeel() {
         stack.push(lookAndFeel)
-    }
-
-    /**
-     * App search. When [hideAfter] is false the screen stays up after a pick — the
-     * gesture that opens it that way is for browsing, and closing the list under the
-     * user every time they try an app would make the next one a fresh search.
-     *
-     * Coming back from the app is the other half of that: the list was left open on
-     * purpose, so the user should land on the home screen rather than be returned to
-     * a search they finished with.
-     */
-    fun openSearch(
-        hideAfter: Boolean = true,
-        onPicked: (Intent) -> Unit,
-    ) {
-        search.onPicked =
-            if (hideAfter) {
-                { intent ->
-                    back()
-                    onPicked(intent)
-                }
-            } else {
-                { intent ->
-                    homeOnReturn = true
-                    onPicked(intent)
-                }
-            }
-        stack.push(search)
     }
 
     fun launch(intent: Intent) {
@@ -196,13 +172,12 @@ class LauncherActivity : Activity() {
     private fun screen(key: String): Screen? =
         when (key) {
             HomeScreen.KEY -> home
+            SearchScreen.KEY -> search
             EditFavoritesScreen.KEY -> editFavorites
             EditWidgetsScreen.KEY -> editWidgets
             SettingsScreen.KEY -> settings
             GesturesScreen.KEY -> gestures
             LookAndFeelScreen.KEY -> lookAndFeel
-            // A restored search has nobody left to report a pick to.
-            SearchScreen.KEY -> null
             else -> null
         }
 

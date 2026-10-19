@@ -11,7 +11,7 @@ import io.github.aurelia.nlauncher.FavoriteApp
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
-import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
 import io.github.aurelia.nlauncher.ui.DragToReorder
 import io.github.aurelia.nlauncher.ui.FavoriteViews
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
@@ -49,6 +49,12 @@ class EditFavoritesScreen(
         populate()
     }
 
+    override fun onSearchCompleted(intent: Intent) {
+        favorites.add(FavoriteApp(intent))
+        LauncherConfig.saveFavorites(activity, favorites)
+        populate()
+    }
+
     private fun populate() {
         favoritesContainer.removeAllViews()
         addAddRow()
@@ -61,16 +67,14 @@ class EditFavoritesScreen(
         // Its + icon matches the favorites' icon size so the row lines up.
         val addLabel = add.findViewById<TextView>(R.id.add_app_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_app_icon)
-        addLabel.textSize = APP_LABEL_TEXT_SIZE
+        addLabel.textSize = APP_LABEL_TEXT_SP
         val addIconSize = (addLabel.textSize * ICON_TEXT_SCALE).roundToInt()
         addIcon.layoutParams =
             addIcon.layoutParams.apply {
                 width = addIconSize
                 height = addIconSize
             }
-        add.setOnClickListener {
-            activity.openSearch { intent -> addFavorite(intent) }
-        }
+        add.setOnClickListener { activity.pushSearch() }
         favoritesContainer.addView(add)
     }
 
@@ -109,13 +113,6 @@ class EditFavoritesScreen(
         ).attach(row.findViewById(R.id.favorite_handle))
 
         favoritesContainer.addView(row)
-    }
-
-    /** Add a picked app to the end of the favorites and save the new order. */
-    private fun addFavorite(intent: Intent) {
-        favorites.add(FavoriteApp(intent))
-        LauncherConfig.saveFavorites(activity, favorites)
-        populate()
     }
 
     private fun removeFavorite(index: Int) {

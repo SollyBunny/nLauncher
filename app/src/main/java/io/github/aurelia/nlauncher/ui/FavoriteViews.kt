@@ -13,12 +13,6 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import kotlin.math.roundToInt
 
-/** Text size (sp) of an app's label, everywhere it is shown. */
-const val APP_LABEL_TEXT_SIZE = 18f
-
-/** App icons are drawn at this multiple of the label's text size. */
-const val ICON_TEXT_SCALE = 2.2f
-
 /**
  * Builds a favorite row. The home screen and the editor's preview both go through
  * here, so the row being edited is guaranteed to look exactly like the real one.
@@ -38,7 +32,7 @@ object FavoriteViews {
         // land on a row that has meanwhile been rebuilt for another one.
         icon.tag = favorite.key
         label.text = Favorites.label(context, favorite)
-        label.textSize = APP_LABEL_TEXT_SIZE
+        label.textSize = APP_LABEL_TEXT_SP
 
         // With icons turned off in Look and feel the row is just the label, so the
         // icon view goes away rather than leaving an empty gap where it was.

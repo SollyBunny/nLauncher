@@ -20,12 +20,13 @@ internal data class IntentKey(
 )
 
 internal val Intent.key: IntentKey
-    get() = IntentKey(
-        component = component,
-        action = action,
-        data = data,
-        categories = categories?.toSet() ?: emptySet(),
-    )
+    get() =
+        IntentKey(
+            component = component,
+            action = action,
+            data = data,
+            categories = categories?.toSet() ?: emptySet(),
+        )
 
 /**
  * App icons, off the main thread.

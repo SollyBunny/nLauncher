@@ -11,7 +11,7 @@ import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
-import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
 import io.github.aurelia.nlauncher.ui.BAR_PADDING_DP
 import io.github.aurelia.nlauncher.ui.DragToReorder
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
@@ -69,7 +69,7 @@ class EditWidgetsScreen(
         // Its + icon matches the widgets' handle size so the row lines up.
         val addLabel = add.findViewById<TextView>(R.id.add_widget_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_widget_icon)
-        addLabel.textSize = APP_LABEL_TEXT_SIZE
+        addLabel.textSize = APP_LABEL_TEXT_SP
         val addIconSize = (addLabel.textSize * ICON_TEXT_SCALE).roundToInt()
         addIcon.layoutParams =
             addIcon.layoutParams.apply {

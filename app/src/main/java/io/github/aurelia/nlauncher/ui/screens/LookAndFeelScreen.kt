@@ -64,9 +64,11 @@ class LookAndFeelScreen(
             LauncherConfig.iconPack(activity) == null -> activity.getString(R.string.icon_pack_default)
             else -> {
                 val packageName = LauncherConfig.iconPack(activity)
-                val label = IconPacks.installed(activity)
-                    .firstOrNull { it.packageName == packageName }
-                    ?.label ?: packageName
+                val label =
+                    IconPacks
+                        .installed(activity)
+                        .firstOrNull { it.packageName == packageName }
+                        ?.label ?: packageName
                 activity.getString(R.string.icon_pack_custom_set, label)
             }
         }
