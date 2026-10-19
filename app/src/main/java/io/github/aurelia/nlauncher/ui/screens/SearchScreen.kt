@@ -58,7 +58,10 @@ class SearchScreen(
 
     private val searchInput: EditText = view.findViewById(R.id.search_input)
     private val listContainer: FrameLayout = view.findViewById(R.id.list_container)
-    private val letterBar = ScrollView(activity)
+    private val letterBar =
+        ScrollView(activity).apply {
+            verticalScrollbarPosition = View.SCROLLBAR_POSITION_LEFT
+        }
 
     /** Every index cell, built once; the filter hides the ones it has no results for. */
     private val letterCells = mutableMapOf<Char, TextView>()
