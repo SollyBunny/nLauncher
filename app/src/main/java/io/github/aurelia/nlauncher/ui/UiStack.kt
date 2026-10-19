@@ -28,6 +28,12 @@ interface Screen {
      * activity paused. Stop timers and let go of the keyboard here.
      */
     fun onDeactivated() {}
+
+    /**
+     * The activity is going away for good — not merely covered or paused. Let go of
+     * anything that outlives it (native resources, callbacks into a dying screen).
+     */
+    fun onDestroyed() {}
 }
 
 /**
@@ -40,6 +46,17 @@ class UiStack(
 ) {
     private val screens = mutableListOf<Screen>()
 
+    /**
+     * The screen that has been told it is the active one, or null while none is.
+     *
+     * This is only ever bookkeeping — it decides who gets *told* about being active,
+     * never which view comes off the host, which is decided by naming the screen in
+     * [push] and [pop]. Keeping the two apart is the whole point: a screen can be
+     * inactive because the activity paused without losing its view, and conflating
+     * the two leaves a screen stuck on the host with nothing left to take it off.
+     */
+    private var active: Screen? = null
+
     /** The screen on top of the stack, or null while the activity shows nothing. */
     val top: Screen? get() = screens.lastOrNull()
 
@@ -49,22 +66,36 @@ class UiStack(
     /** Show [screen] on top of the current one, taking the current one off the host. */
     fun push(screen: Screen) {
         if (top === screen) return
-        deactivate(screens.lastOrNull())
+        stop(screens.lastOrNull())
         screens.add(screen)
-        attach(screen)
+        start(screen)
     }
 
     /**
      * Drop the top screen and return to the one underneath. False when only the home
-     * screen is left, which tells the activity to fall back to the platform default.
+     * screen is left, which tells the activity there is nothing behind this one.
      */
     fun pop(): Boolean {
         if (screens.size <= 1) return false
-        deactivate(screens.removeAt(screens.lastIndex))
-        // The screen underneath was taken off the host when this one was pushed, so
-        // it has to be put back before the user can see it again.
-        attach(screens.last())
+        // The screen being dropped is named explicitly rather than left to [active]:
+        // the stack can be changed while the activity is paused, and then there is no
+        // active screen to stop, so its view would never come off the host.
+        stop(screens.removeAt(screens.lastIndex))
+        // The screen underneath was taken off when this one was pushed, so it has to
+        // be put back before the user can see it again.
+        start(screens.last())
         return true
+    }
+
+    /**
+     * Put [stack] back as it was — after a rotation, say. Only the top is shown; the
+     * rest are kept, built and ready, but never attached.
+     */
+    fun restore(stack: List<Screen>) {
+        stop(top)
+        screens.clear()
+        screens.addAll(stack)
+        start(stack.lastOrNull())
     }
 
     /** Return to the home screen, dropping everything stacked above it. */
@@ -72,8 +103,35 @@ class UiStack(
         while (screens.size > 1) pop()
     }
 
-    /** Put [screen] on the host and let it know it is the active one. */
-    private fun attach(screen: Screen) {
+    /** The activity resumed: the top screen becomes active, unless it already is. */
+    fun onResumed() {
+        start(top)
+    }
+
+    /**
+     * The activity paused: whatever is active stops being active. Its view stays on
+     * the host — the window is off screen either way, and taking it off and putting
+     * it back would throw the layout away for nothing.
+     */
+    fun onPaused() {
+        stop(top, detach = false)
+    }
+
+    /** The activity is going away for good: tell every screen, however deep it is. */
+    fun destroy() {
+        stop(top)
+        for (screen in screens) screen.onDestroyed()
+        active = null
+        screens.clear()
+    }
+
+    /**
+     * Put [screen] on the host and let it know it is the active one — unless it has
+     * been told already, which is what keeps a cold start from doing this screen's
+     * work twice over (once through the push, once through the resume).
+     */
+    private fun start(screen: Screen?) {
+        if (screen == null || screen === active) return
         if (screen.view.parent !== host) {
             host.addView(
                 screen.view,
@@ -82,18 +140,29 @@ class UiStack(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                 ),
             )
-            // Ask for the window insets explicitly: a screen pushed later than the
-            // home screen is attached to an already laid out window, and would
-            // otherwise never be told where the system bars are.
+            // Ask for the window insets explicitly: a screen pushed later than the home
+            // screen is attached to an already laid out window, and would otherwise
+            // never be told where the system bars are.
             screen.view.requestApplyInsets()
         }
+        active = screen
         screen.onActivated()
     }
 
-    private fun deactivate(screen: Screen?) {
+    /**
+     * Let [screen] know it is not the active one any more and take it off the host,
+     * unless [detach] says it is only paused rather than covered or closed.
+     */
+    private fun stop(
+        screen: Screen?,
+        detach: Boolean = true,
+    ) {
         if (screen == null) return
-        screen.onDeactivated()
-        host.removeView(screen.view)
+        if (screen === active) {
+            active = null
+            screen.onDeactivated()
+        }
+        if (detach) host.removeView(screen.view)
     }
 }
 

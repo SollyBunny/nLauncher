@@ -1,5 +1,6 @@
 package io.github.aurelia.nlauncher
 
+import android.annotation.SuppressLint
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -44,6 +45,13 @@ class LauncherActivity : Activity() {
     /** One search screen, reused, so opening it again costs nothing to build. */
     private val search by lazy { SearchScreen(this) }
 
+    /**
+     * Set when a screen the user left open on purpose launched an app, so the resume
+     * that follows going back to that app lands on the home screen. Cleared by the
+     * resume itself, whatever the stack looks like by then.
+     */
+    private var homeOnReturn = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Resolve the launchable apps straight away, off the main thread, while the
@@ -66,7 +74,7 @@ class LauncherActivity : Activity() {
         if (restored.isNullOrEmpty()) {
             stack.push(home)
         } else {
-            restored.forEach { stack.push(it) }
+            stack.restore(restored)
         }
     }
 
@@ -80,12 +88,23 @@ class LauncherActivity : Activity() {
 
     override fun onResume() {
         super.onResume()
-        stack.top?.onActivated()
+        // Back from an app a screen left open on purpose. This has to happen before
+        // the stack is resumed, so the home screen is the one that gets activated.
+        if (homeOnReturn) {
+            homeOnReturn = false
+            stack.popToHome()
+        }
+        stack.onResumed()
     }
 
     override fun onPause() {
-        stack.top?.onDeactivated()
+        stack.onPaused()
         super.onPause()
+    }
+
+    override fun onDestroy() {
+        stack.destroy()
+        super.onDestroy()
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -95,9 +114,17 @@ class LauncherActivity : Activity() {
 
     // ---- Navigation ------------------------------------------------------
 
-    /** Close the screen on top, or leave the launcher when only home is left. */
+    /**
+     * Close the screen on top.
+     *
+     * With only the home screen left there is nothing to close and nothing behind it,
+     * so back is swallowed rather than finishing the launcher. Finishing the home
+     * activity leaves the task empty, and the system answers that by starting the home
+     * app again as a fresh activity — so the home screen tears itself down and builds
+     * itself again, for a back press that was meant to do nothing.
+     */
     fun back() {
-        if (!stack.pop()) finish()
+        stack.pop()
     }
 
     /** The editable favorites. */
@@ -121,21 +148,30 @@ class LauncherActivity : Activity() {
     }
 
     /**
-     * App search, [onPicked] is called once an app is selected.
-     * If [hideAfter] is false, the search page wont close once an app is selected.
+     * App search. When [hideAfter] is false the screen stays up after a pick — the
+     * gesture that opens it that way is for browsing, and closing the list under the
+     * user every time they try an app would make the next one a fresh search.
+     *
+     * Coming back from the app is the other half of that: the list was left open on
+     * purpose, so the user should land on the home screen rather than be returned to
+     * a search they finished with.
      */
     fun openSearch(
         hideAfter: Boolean = true,
         onPicked: (Intent) -> Unit,
     ) {
-        if (hideAfter) {
-            search.onPicked = {
-                back()
-                onPicked(it)
+        search.onPicked =
+            if (hideAfter) {
+                { intent ->
+                    back()
+                    onPicked(intent)
+                }
+            } else {
+                { intent ->
+                    homeOnReturn = true
+                    onPicked(intent)
+                }
             }
-        } else {
-            search.onPicked = onPicked
-        }
         stack.push(search)
     }
 
@@ -164,6 +200,14 @@ class LauncherActivity : Activity() {
 
     // ---- Back ------------------------------------------------------------
 
+    /**
+     * Only the pre-33 path: Android 13+ routes back through the
+     * [OnBackInvokedDispatcher] callback registered in [registerBackCallback]. This
+     * override is still needed for API 26-32, which is why lint's suggestion to move
+     * to AndroidX's `OnBackPressedDispatcher` does not apply — this app has no
+     * AndroidX, and the framework has no equivalent below API 33.
+     */
+    @SuppressLint("GestureBackNavigation")
     @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
     override fun onBackPressed() {
         back()
