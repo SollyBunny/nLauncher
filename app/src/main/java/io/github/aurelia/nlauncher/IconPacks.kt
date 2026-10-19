@@ -6,21 +6,9 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
+import org.xmlpull.v1.XmlPullParser
 import java.util.Locale
 
-/**
- * Icon packs, and loading an app's icon through one.
- *
- * There is no standard API for this. An icon pack is an ordinary app that ships a
- * `drawable` resource named after each activity whose icon it replaces — the same name
- * the app itself uses, e.g. `ic_launcher` — and advertises itself through an intent
- * filter. So applying a pack is: work out which resource the target app names its icon
- * with, ask the pack's own resources for a drawable of that name, and fall back to the
- * system icon if it does not have one.
- *
- * Every lookup is off the main thread and behind [Icons]'s cache, like every other icon
- * load, because [Resources.getIdentifier] walks the pack's whole resource table.
- */
 object IconPacks {
     /**
      * How an icon pack announces itself. There is more than one spelling in the wild —
@@ -30,21 +18,23 @@ object IconPacks {
      */
     private val PACK_FILTERS =
         listOf(
+            Intent("org.adw.launcher.THEMES"),
+            Intent("org.adw.launcher.icons.ACTION_PICK_ICON"),
+            Intent("com.gau.go.launcherex.theme"),
+            Intent("com.dlto.atom.launcher.THEME"),
+            Intent("com.gridappsinc.launcher.theme.apk_action"),
+            Intent("ch.deletescape.lawnchair.ICONPACK"),
             Intent("org.android.intent.action.ICON_PACKAGE").addCategory("org.android.intent.category.ICON_PACKAGE"),
             Intent("org.android.intent.action.ICON_PICKER").addCategory("org.android.intent.category.ICON_PICKER"),
             Intent(Intent.ACTION_MAIN).addCategory("com.anddoes.launcher.ICON_PICKER"),
+            Intent(Intent.ACTION_MAIN).addCategory("com.anddoes.launcher.THEME"),
         )
 
-    /** One installed icon pack: what to show in the picker, and what to load through. */
     class IconPack(
         val packageName: String,
         val label: String,
     )
 
-    /**
-     * Every icon pack installed, by label. The system icons are not in here: they are
-     * not an app, and the picker always offers them itself, before anything in this list.
-     */
     fun installed(context: Context): List<IconPack> {
         val pm = context.packageManager
         val found = mutableMapOf<String, IconPack>()
@@ -77,9 +67,6 @@ object IconPacks {
         return runCatching { load(context, pack, intent) }.getOrNull()
     }
 
-    /**
-     * The pack's drawable named after [component]'s icon resource.
-     */
     private fun load(
         context: Context,
         pack: String,
@@ -88,22 +75,150 @@ object IconPacks {
         val pm = context.packageManager
         val component = intent.component ?: return null
 
-        return try {
-            val activity = pm.getActivityInfo(component, 0)
-            val iconId = activity.iconResource
-            if (iconId == 0) return null
+        val packResources = pm.getResourcesForApplication(pack)
 
-            val activityResources = pm.getResourcesForApplication(activity.applicationInfo)
-            val iconName = activityResources.getResourceEntryName(iconId)
+        val mappedName = findMappedIcon(
+            context,
+            packResources,
+            pack,
+            component
+        )
 
-            val packResources = pm.getResourcesForApplication(pack)
-            val id = packResources.getIdentifier(iconName, "drawable", pack)
-            if (id == 0) return null
+        if (mappedName != null) {
+            val drawable = getPackDrawable(
+                packResources,
+                pack,
+                mappedName
+            )
 
-            packResources.getDrawable(id, null)
-        } catch (_: PackageManager.NameNotFoundException) {
-            null
-        } catch (_: Resources.NotFoundException) {
+            if (drawable != null) {
+                return drawable
+            }
+        }
+
+        // Fallback for packs that use the original icon resource name.
+        val activity = pm.getActivityInfo(component, 0)
+        val iconId = activity.iconResource
+
+        if (iconId == 0) return null
+
+        val activityResources =
+            pm.getResourcesForApplication(activity.applicationInfo)
+
+        val iconName =
+            activityResources.getResourceEntryName(iconId)
+
+        return getPackDrawable(packResources, pack, iconName)
+    }
+
+    /**
+     * Finds the drawable name mapped to a component in appfilter.xml.
+     */
+    private fun findMappedIcon(
+        context: Context,
+        resources: Resources,
+        pack: String,
+        component: ComponentName,
+    ): String? {
+        fun matchesComponent(value: String?): Boolean {
+            if (value == null) return false
+
+            val normalized = value
+                .removePrefix("ComponentInfo{")
+                .removeSuffix("}")
+
+            val mapped = ComponentName.unflattenFromString(normalized)
+                ?: return false
+
+            return mapped.packageName == component.packageName &&
+                mapped.className == component.className
+        }
+
+        fun parseFilter(parser: XmlPullParser): String? {
+            var event = parser.eventType
+
+            while (event != XmlPullParser.END_DOCUMENT) {
+                if (event == XmlPullParser.START_TAG &&
+                    parser.name == "item"
+                ) {
+                    val target = parser.getAttributeValue(
+                        null,
+                        "component"
+                    )
+
+                    if (matchesComponent(target)) {
+                        return parser.getAttributeValue(
+                            null,
+                            "drawable"
+                        )
+                    }
+                }
+
+                event = parser.next()
+            }
+
+            return null
+        }
+
+        // 1. Look in res/xml/appfilter.xml.
+        val xmlId = resources.getIdentifier(
+            "appfilter",
+            "xml",
+            pack
+        )
+
+        if (xmlId != 0) {
+            try {
+                resources.getXml(xmlId).use { parser ->
+                    parseFilter(parser)?.let { return it }
+                }
+            } catch (_: Exception) {
+                // Try assets.
+            }
+        }
+
+        // 2. Look in assets/appfilter.xml.
+        try {
+            val packContext = context.createPackageContext(
+                pack,
+                Context.CONTEXT_IGNORE_SECURITY
+            )
+
+            packContext.assets.open("appfilter.xml").use { stream ->
+                val parser = android.util.Xml.newPullParser()
+                parser.setInput(stream, null)
+                return parseFilter(parser)
+            }
+        } catch (_: Exception) {
+            // No accessible mapping.
+        }
+
+        return null
+    }
+
+    /**
+     * Resolves a drawable name in drawable/ or mipmap/.
+     */
+    private fun getPackDrawable(
+        resources: Resources,
+        pack: String,
+        name: String,
+    ): Drawable? {
+        val drawableId = resources.getIdentifier(
+            name, "drawable", pack
+        )
+
+        val mipmapId = if (drawableId == 0) {
+            resources.getIdentifier(name, "mipmap", pack)
+        } else {
+            0
+        }
+
+        val id = if (drawableId != 0) drawableId else mipmapId
+
+        return if (id != 0) {
+            resources.getDrawable(id, null)
+        } else {
             null
         }
     }
