@@ -202,7 +202,7 @@ class LauncherActivity : Activity() {
             GesturesScreen.KEY -> gestures
             LookAndFeelScreen.KEY -> lookAndFeel
             // A restored search has nobody left to report a pick to.
-            SearchScreen.KEY -> search.also { it.onPicked = {} }
+            SearchScreen.KEY -> null
             else -> null
         }
 
