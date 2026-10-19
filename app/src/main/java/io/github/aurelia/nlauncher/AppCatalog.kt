@@ -6,6 +6,7 @@ import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
+import java.util.Locale
 import java.util.concurrent.Executors
 
 /**
@@ -37,8 +38,15 @@ object AppCatalog {
     /** Told about the list once it has been resolved; one shot per waiter. */
     private val ready = mutableListOf<(List<AppEntry>) -> Unit>()
 
-    /** The refresh to run once the current list's icons have all landed. */
-    private var iconsRefresh: () -> Unit = {}
+    /**
+     * The refresh to run once the current list's icons have all landed.
+     *
+     * Held only for as long as a load is actually on its way and cleared the moment
+     * it is handed over: it is a lambda owned by whichever screen asked for the list,
+     * so leaving it here past that point keeps a destroyed activity alive for the life
+     * of the process.
+     */
+    private var iconsRefresh: (() -> Unit)? = null
 
     /** One launchable app: what its rows show, and what picking it launches. */
     class AppEntry(
@@ -47,6 +55,16 @@ object AppCatalog {
     ) {
         /** Stable identity for the icon cache. */
         val key: String = intent.toUri(Intent.URI_INTENT_SCHEME)
+
+        /**
+         * [label] folded for searching, once, here on the resolver thread.
+         *
+         * Folding is done in [Locale.ROOT] on purpose: the default locale would
+         * search, group and order by rules the user never asked for — under Turkish,
+         * "I" folds to a dotless "ı" and an app called "Instagram" stops matching a
+         * typed "i".
+         */
+        val searchLabel: String = label.lowercase(Locale.ROOT)
     }
 
     /**
@@ -68,12 +86,14 @@ object AppCatalog {
         onReady: (List<AppEntry>) -> Unit,
         onIconsLoaded: () -> Unit = {},
     ) {
-        iconsRefresh = onIconsLoaded
         val existing = cached
         if (existing != null) {
+            // Nothing is loading, so there is no refresh to remember: the rows ask
+            // Icons for each icon as they are bound and get the cached one at once.
             onReady(existing)
             return
         }
+        iconsRefresh = onIconsLoaded
         ready += onReady
         resolve(context)
     }
@@ -140,7 +160,7 @@ object AppCatalog {
                             .addCategory(Intent.CATEGORY_LAUNCHER)
                             .setComponent(ComponentName(it.packageName, it.name)),
                 )
-            }.sortedBy { it.label.lowercase() }
+            }.sortedBy { it.searchLabel }
             .toList()
     }
 
@@ -177,8 +197,12 @@ object AppCatalog {
         context: Context,
         entries: List<AppEntry>,
     ) {
+        // Take the refresh and let go of it: it belongs to the screen that asked for
+        // the list, and holding it any longer than the load keeps that screen (and
+        // its activity) reachable from a process-wide object.
+        val refresh = iconsRefresh.also { iconsRefresh = null }
         if (entries.isEmpty()) {
-            iconsRefresh()
+            refresh?.invoke()
             return
         }
         var pending = entries.size
@@ -188,11 +212,11 @@ object AppCatalog {
             // count always reaches zero.
             val loader = loader(context, entry)
             if (loader == null) {
-                if (--pending == 0) iconsRefresh()
+                if (--pending == 0) refresh?.invoke()
                 continue
             }
             Icons.icon(context, entry.key, loader) {
-                if (--pending == 0) iconsRefresh()
+                if (--pending == 0) refresh?.invoke()
             }
         }
     }

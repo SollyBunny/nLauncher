@@ -26,6 +26,7 @@ import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -266,8 +267,7 @@ class SearchScreen(
         val adapter = this.adapter ?: return
         val position = listView?.firstVisiblePosition ?: return
         if (position < 0 || position >= adapter.count) return
-        val label = (adapter.getItem(position) as AppCatalog.AppEntry).label
-        val letter = label.firstOrNull()?.lowercaseChar()?.takeIf { it.isLetter() } ?: '#'
+        val letter = letterOf(adapter.getItem(position) as AppCatalog.AppEntry)
         if (letter == highlighted) return
         highlighted = letter
         for ((cellLetter, cell) in letterCells) {
@@ -308,32 +308,26 @@ class SearchScreen(
     ) : BaseAdapter() {
         private var shown: List<AppCatalog.AppEntry> = all
 
-        /** Distinct index labels: '#' first (labels not starting with a letter), then a-z. */
+        /** Distinct index labels in the results: '#' first, then a-z. */
         fun letters(): List<Char> {
-            val alpha =
-                shown
-                    .mapNotNull { it.label.firstOrNull()?.lowercaseChar() }
-                    .filter { it in 'a'..'z' }
-                    .distinct()
-                    .sorted()
-            val hasNonLetter = shown.any { it.label.firstOrNull()?.isLetter() != true }
-            return if (hasNonLetter) listOf('#') + alpha else alpha
+            val groups = shown.map { letterOf(it) }.distinct()
+            return if (NON_LETTER in groups) {
+                listOf(NON_LETTER) + groups.filter { it != NON_LETTER }.sorted()
+            } else {
+                groups.sorted()
+            }
         }
 
         /**
-         * First shown position under [letter]: for '#' the first non-letter label,
-         * otherwise the first label starting with that letter. -1 if absent.
+         * First shown position under [letter]: for '#' the first label that does not
+         * start with an a-z character, otherwise the first under that letter.
+         * -1 if there is none.
          */
-        fun indexOfLetter(letter: Char): Int =
-            if (letter == '#') {
-                shown.indexOfFirst { it.label.firstOrNull()?.isLetter() != true }
-            } else {
-                shown.indexOfFirst { it.label.lowercase().startsWith(letter) }
-            }
+        fun indexOfLetter(letter: Char): Int = shown.indexOfFirst { letterOf(it) == letter }
 
         fun filter(query: String) {
-            val q = query.trim().lowercase()
-            shown = if (q.isEmpty()) all else all.filter { it.label.lowercase().contains(q) }
+            val q = query.trim().lowercase(Locale.ROOT)
+            shown = if (q.isEmpty()) all else all.filter { it.searchLabel.contains(q) }
             notifyDataSetChanged()
         }
 
@@ -401,6 +395,24 @@ class SearchScreen(
         private const val LETTER_CELL_PLACEHOLDER_DP = 22
 
         /** Every letter the index can show: '#' for non-letters, then the alphabet. */
-        private val ALL_LETTERS: List<Char> = listOf('#') + ('a'..'z').toList()
+        private val ALL_LETTERS: List<Char> = listOf(NON_LETTER) + ('a'..'z').toList()
     }
 }
+
+/** The index letter for anything that does not start with one of the a-z letters. */
+private const val NON_LETTER = '#'
+
+/**
+ * The index letter a label belongs under: its first character if that is one of the
+ * twenty-six the index offers, and [#NON_LETTER] for everything else — labels starting
+ * with a digit, a symbol, or a letter outside a-z.
+ *
+ * One definition for grouping, jumping and highlighting, so a label can never be
+ * listed under one letter and highlighted under another.
+ *
+ * TODO: the index is a-z only. An app named "Écran" or "Über" is listed and reachable
+ *  by scrolling or searching, but the index files it under '#' alongside digits and
+ *  symbols. Grouping those properly means sorting with a [java.text.Collator] and
+ *  showing the locale's own letters in the bar.
+ */
+private fun letterOf(entry: AppCatalog.AppEntry): Char = entry.searchLabel.firstOrNull()?.takeIf { it in 'a'..'z' } ?: NON_LETTER
