@@ -7,8 +7,8 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.VelocityTracker
+import android.view.View
 import android.view.ViewConfiguration
-import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 import io.github.aurelia.nlauncher.FavoriteApp
@@ -16,9 +16,11 @@ import io.github.aurelia.nlauncher.Gesture
 import io.github.aurelia.nlauncher.GestureAction
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
+import io.github.aurelia.nlauncher.PackageWatcher
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
 import io.github.aurelia.nlauncher.ui.FavoriteViews
+import io.github.aurelia.nlauncher.ui.GestureSurfaceLayout
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.padForSystemBars
@@ -38,7 +40,8 @@ class HomeScreen(
 ) : Screen {
     override val key = KEY
 
-    override val view: FrameLayout = activity.layoutInflater.inflate(R.layout.screen_home, null, false) as FrameLayout
+    override val view: GestureSurfaceLayout =
+        activity.layoutInflater.inflate(R.layout.screen_home, null, false) as GestureSurfaceLayout
 
     private val favoritesContainer: LinearLayout = view.findViewById(R.id.favorites)
     private val widgetsContainer: LinearLayout = view.findViewById(R.id.widgets)
@@ -48,7 +51,13 @@ class HomeScreen(
 
     private val wallpaperManager = WallpaperManager.getInstance(activity)
 
-    private val favorites = mutableListOf<FavoriteApp>()
+    /**
+     * The favorites currently on screen, and the package revision they were built at.
+     * Together they decide whether the column still matches what is stored — see
+     * [populateFavorites].
+     */
+    private var favorites: List<FavoriteApp> = emptyList()
+    private var renderedRevision = -1
     private var actions: Map<Gesture, GestureAction> = emptyMap()
 
     private val gestures: GestureDetector
@@ -105,12 +114,29 @@ class HomeScreen(
             )
 
         // Only touches that no child (a favorite) consumed reach this screen, which is
-        // what keeps the gestures off the favorites themselves.
-        view.setOnTouchListener { _, event ->
-            gestures.onTouchEvent(event)
-            trackSwipe(event)
-            true
-        }
+        // what keeps the gestures off the favorites themselves. A touch here is a
+        // gesture or a tap on the wallpaper, never a click on a view, so the surface
+        // itself answers performClick: that is what lets an accessibility service
+        // reach the wallpaper the same way a tap does.
+        view.onSurfaceClick = { forwardTapToWallpaper(view.tapX, view.tapY) }
+        view.setOnTouchListener(
+            object : View.OnTouchListener {
+                override fun onTouch(
+                    v: View,
+                    event: MotionEvent,
+                ): Boolean {
+                    gestures.onTouchEvent(event)
+                    trackSwipe(event)
+                    if (event.actionMasked == MotionEvent.ACTION_UP) {
+                        view.tapX = event.x
+                        view.tapY = event.y
+                        // A swipe already claimed this touch; a tap is what is left.
+                        if (!gestureFired) v.performClick()
+                    }
+                    return true
+                }
+            },
+        )
 
         // Keep the favorites clear of the navigation bar, and the widgets below the
         // status bar with their own breathing room on top.
@@ -119,12 +145,16 @@ class HomeScreen(
 
     override fun onActivated() {
         actions = LauncherConfig.gestureActions(activity)
-        populateFavorites()
+
+        // The widgets are rebuilt every time (cheap, and their text moves with the
+        // clock); the favorites only when they have actually changed — see below.
         populateWidgets()
         updateWidgets()
-        // This screen is activated both when it is pushed and when the activity
-        // resumes while it is on top, so only ever start one tick. Only a clock
-        // needs it: nothing else on the home screen changes by the minute.
+        populateFavorites()
+
+        // Only ever one tick, however many times this screen is activated: a push and
+        // the resume that follows it are two activations of the same thing. Only a
+        // clock needs one — nothing else here changes by the minute.
         if (widgetViews.any { it.first == Widget.CLOCK }) {
             if (!clockTicking) {
                 clockTicking = true
@@ -141,6 +171,11 @@ class HomeScreen(
             clockTicking = false
             clockHandler.removeCallbacks(clockTick)
         }
+    }
+
+    override fun onDestroyed() {
+        // Native allocation, and the whole activity is on its way out with it.
+        velocity.recycle()
     }
 
     /** Rebuild the widget column from the stored order. */
@@ -166,11 +201,25 @@ class HomeScreen(
         for ((widget, view) in widgetViews) view.text = WidgetViews.text(activity, widget, now)
     }
 
+    /**
+     * Rebuild the favorites column, but only when what is on screen no longer matches
+     * what is stored. A launcher redraws this screen on every Home press, and
+     * inflating a row per favorite every time is the most expensive thing it does —
+     * for a list that almost never changes between two presses.
+     *
+     * The package revision is part of the check because rows only ask [Icons] for
+     * their icon as they are created: when a package changes, the icon cache is
+     * dropped underneath them, and the column has to be built again to pick the new
+     * icons up.
+     */
     private fun populateFavorites() {
-        favoritesContainer.removeAllViews()
-        favorites.clear()
-        favorites.addAll(LauncherConfig.favorites(activity))
+        val stored = LauncherConfig.favorites(activity)
+        val revision = PackageWatcher.revision
+        if (revision == renderedRevision && favorites.map { it.key } == stored.map { it.key }) return
+        favorites = stored
+        renderedRevision = revision
 
+        favoritesContainer.removeAllViews()
         for (favorite in favorites) {
             val row = FavoriteViews.create(activity.layoutInflater, favoritesContainer, favorite, activity)
             row.setOnClickListener { activity.launch(favorite.intent) }
@@ -216,7 +265,13 @@ class HomeScreen(
                     velocity.computeCurrentVelocity(1000)
                     val dx = event.x - touchStartX
                     val dy = event.y - touchStartY
-                    if (isSwipe(dx, dy) || isFlick(dx, dy)) trigger(direction(dx, dy))
+                    // A swipe is a gesture like any other, so it claims the touch: one
+                    // finger-down must never trigger two things, here or in the
+                    // click the touch listener sends on the way out.
+                    if (isSwipe(dx, dy) || isFlick(dx, dy)) {
+                        gestureFired = true
+                        trigger(direction(dx, dy))
+                    }
                 }
                 velocity.clear()
             }

@@ -3,7 +3,8 @@
     The home screen: the widgets (clock, date, ...) at the top and the favorites in the
     bottom-left corner, over whatever the transparent window shows (the wallpaper).
 -->
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<io.github.aurelia.nlauncher.ui.GestureSurfaceLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@android:color/transparent">
@@ -29,4 +30,4 @@
         android:paddingStart="16dp"
         android:paddingEnd="16dp" />
 
-</FrameLayout>
+</io.github.aurelia.nlauncher.ui.GestureSurfaceLayout>
