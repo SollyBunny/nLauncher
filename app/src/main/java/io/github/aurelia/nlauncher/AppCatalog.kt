@@ -13,7 +13,7 @@ import java.util.concurrent.Executors
  * The apps that can be launched, listed once and kept in memory.
  *
  * The list is resolved on a background thread, and the launcher asks for it as soon
- * as it starts ([LauncherActivity] calls [prewarm]), so opening the search finds
+ * as it starts ([LauncherActivity] calls [init]), so opening the search finds
  * the labels already there instead of paying for a package query on the spot. [apps]
  * hands the list to [onReady] on the main thread — immediately when it is already
  * cached, otherwise as soon as the resolver has finished with it. Icons are left
@@ -64,12 +64,19 @@ object AppCatalog {
         val searchLabel: String = label.lowercase(Locale.ROOT)
     }
 
-    /**
-     * Resolve the app list in the background before anybody asks for it, so the
-     * first search opens on a list that is already there.
-     */
-    fun prewarm(context: Context) {
+    fun init(context: Context) {
+        /**
+         * Resolve the app list in the background before anybody asks for it, so the
+         * first search opens on a list that is already there.
+         */
         apps(context, onReady = {})
+        /** Drop the list (and re-resolve it on the next ask) when packages change. */
+        if (!watching) {
+            watching = true
+            PackageWatcher.onPackagesChanged(context) {
+                cached = null
+            }
+        }
     }
 
     /**
@@ -128,7 +135,6 @@ object AppCatalog {
     private fun resolve(context: Context) {
         if (building) return
         building = true
-        watch(context)
         // The task works from the application context and the entries alone, so it
         // never holds on to a screen.
         val app = context.applicationContext
@@ -178,15 +184,6 @@ object AppCatalog {
         val waiters = ready.toList()
         ready.clear()
         waiters.forEach { it(entries) }
-    }
-
-    /** Drop the list (and re-resolve it on the next ask) when packages change. */
-    private fun watch(context: Context) {
-        if (watching) return
-        watching = true
-        PackageWatcher.onPackagesChanged(context) {
-            cached = null
-        }
     }
 
     private fun loadIcons(
