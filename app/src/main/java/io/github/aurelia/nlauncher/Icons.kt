@@ -113,12 +113,17 @@ object Icons {
         // Only the resources, never the activity: this runs long after the call that
         // asked for the icon has gone.
         val resources = context.applicationContext.resources
+        val iconPack = LauncherConfig.iconPack(context)
         try {
             this.loader.execute {
                 val icon =
                     try {
                         val pm = context.applicationContext.packageManager
-                        IconPacks.icon(context, intent) ?: pm.getActivityIcon(intent)
+                        if (iconPack == null) {
+                            pm.getActivityIcon(intent)
+                        } else {
+                            IconPacks.icon(context, iconPack, intent) ?: pm.getActivityIcon(intent)
+                        }
                     } catch (e: Exception) {
                         // A broken icon must not take the whole list down with it.
                         Log.w("Icons", "Could not load the icon for $intent", e)

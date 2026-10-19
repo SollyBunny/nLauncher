@@ -52,22 +52,7 @@ object IconPacks {
         return found.values.sortedBy { it.label.lowercase(Locale.ROOT) }
     }
 
-    /**
-     * The icon [component]'s app would have, but through the chosen pack.
-     *
-     * Returns null whenever the pack cannot supply one — no pack chosen, the pack not
-     * installed any more, no resource of that name in it, or a pack whose lookup throws
-     * — which is the caller's signal to fall back to the system's own icon.
-     */
     fun icon(
-        context: Context,
-        intent: Intent,
-    ): Drawable? {
-        val pack = LauncherConfig.iconPack(context) ?: return null
-        return runCatching { load(context, pack, intent) }.getOrNull()
-    }
-
-    private fun load(
         context: Context,
         pack: String,
         intent: Intent,
