@@ -37,33 +37,6 @@ object Favorites {
         return labels.getOrPut(favorite.key) { resolveLabel(context.packageManager, favorite.intent) }
     }
 
-    /**
-     * [favorite]'s icon: the cached one right away, or null while it is still loading,
-     * in which case [onReady] gets it once it lands.
-     */
-    fun icon(
-        context: Context,
-        favorite: FavoriteApp,
-        onReady: (Drawable?) -> Unit,
-    ): Drawable? {
-        watch(context)
-        // The loader must not outlive the activity, so it works from the application
-        // context and a private copy of the intent, and never touches either again.
-        val pm = context.applicationContext.packageManager
-        val intent = Intent(favorite.intent)
-        val component = intent.component
-        return Icons.icon(
-            context,
-            favorite.key,
-            {
-                // The pack first, the system's own icon if it has nothing for this app.
-                val packed = component?.let { IconPacks.icon(context, it) }
-                packed ?: pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.loadIcon(pm)
-            },
-            onReady,
-        )
-    }
-
     private fun resolveLabel(
         pm: PackageManager,
         intent: Intent,

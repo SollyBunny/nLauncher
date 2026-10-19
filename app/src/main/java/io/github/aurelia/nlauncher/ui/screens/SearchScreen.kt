@@ -21,6 +21,7 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import io.github.aurelia.nlauncher.AppCatalog
+import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
@@ -344,7 +345,7 @@ class SearchScreen(
             // icon lands, rather than leaving every row blank until the last icon in
             // the catalog has arrived.
             icon.setImageDrawable(
-                AppCatalog.icon(activity, entry) { loaded ->
+                Icons.icon(activity, entry.intent) { loaded ->
                     if (icon.tag == entry.key) icon.setImageDrawable(loaded)
                 },
             )

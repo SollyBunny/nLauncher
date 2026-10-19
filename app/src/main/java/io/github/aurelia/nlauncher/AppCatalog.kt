@@ -3,7 +3,6 @@ package io.github.aurelia.nlauncher
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import android.graphics.drawable.Drawable
 import android.os.Handler
 import android.os.Looper
 import java.util.Locale
@@ -102,33 +101,6 @@ object AppCatalog {
         resolve(context)
     }
 
-    /** [entry]'s icon: the cached one, or null while it is still loading. */
-    fun icon(
-        context: Context,
-        entry: AppEntry,
-    ): Drawable? {
-        val load = loader(context, entry) ?: return null
-        return Icons.icon(context, entry.key, load)
-    }
-
-    /**
-     * As above, and [onReady] is called once the icon is there — right away when it
-     * was cached, and with null when it cannot be loaded. A row in a recycling list
-     * wants this rather than waiting for every icon in the catalog to arrive.
-     */
-    fun icon(
-        context: Context,
-        entry: AppEntry,
-        onReady: (Drawable?) -> Unit,
-    ): Drawable? {
-        val load = loader(context, entry)
-        if (load == null) {
-            onReady(null)
-            return null
-        }
-        return Icons.icon(context, entry.key, load, onReady)
-    }
-
     // ---- Resolving -------------------------------------------------------
 
     /** Start resolving the list, unless a resolution is already on its way. */
@@ -180,50 +152,8 @@ object AppCatalog {
             return
         }
         cached = entries
-        loadIcons(context, entries)
         val waiters = ready.toList()
         ready.clear()
         waiters.forEach { it(entries) }
-    }
-
-    private fun loadIcons(
-        context: Context,
-        entries: List<AppEntry>,
-    ) {
-        // Take the refresh and let go of it: it belongs to the screen that asked for
-        // the list, and holding it any longer than the load keeps that screen (and
-        // its activity) reachable from a process-wide object.
-        val refresh = iconsRefresh.also { iconsRefresh = null }
-        if (entries.isEmpty()) {
-            refresh?.invoke()
-            return
-        }
-        var pending = entries.size
-        for (entry in entries) {
-            // Icons already cached count straight away, the rest report in as they
-            // land, and an entry with nothing to load reports in right now, so the
-            // count always reaches zero.
-            val loader = loader(context, entry)
-            if (loader == null) {
-                if (--pending == 0) refresh?.invoke()
-                continue
-            }
-            Icons.icon(context, entry.key, loader) {
-                if (--pending == 0) refresh?.invoke()
-            }
-        }
-    }
-
-    /**
-     * How to load [entry]'s icon on a background thread: from the application context
-     * and the entry alone, so the task never holds on to a screen.
-     */
-    private fun loader(
-        context: Context,
-        entry: AppEntry,
-    ): (() -> Drawable?)? {
-        val component = entry.intent.component ?: return null
-        val pm = context.applicationContext.packageManager
-        return { IconPacks.icon(context, component) ?: pm.getActivityIcon(component) }
     }
 }

@@ -8,6 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import io.github.aurelia.nlauncher.FavoriteApp
 import io.github.aurelia.nlauncher.Favorites
+import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import kotlin.math.roundToInt
@@ -55,7 +56,7 @@ object FavoriteViews {
         // The icon may still be loading in the background: draw what there is now and
         // let the callback fill the row in when it lands.
         icon.setImageDrawable(
-            Favorites.icon(context, favorite) { loaded ->
+            Icons.icon(context, favorite.intent) { loaded ->
                 if (icon.tag == favorite.key) icon.setImageDrawable(loaded)
             },
         )

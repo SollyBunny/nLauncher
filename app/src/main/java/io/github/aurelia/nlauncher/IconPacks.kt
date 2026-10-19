@@ -71,32 +71,40 @@ object IconPacks {
      */
     fun icon(
         context: Context,
-        component: ComponentName,
+        intent: Intent,
     ): Drawable? {
         val pack = LauncherConfig.iconPack(context) ?: return null
-        return runCatching { load(context, pack, component) }.getOrNull()
+        return runCatching { load(context, pack, intent) }.getOrNull()
     }
 
     /**
      * The pack's drawable named after [component]'s icon resource.
-     *
-     * The name comes from the target app's own resources, which is what a pack matches
-     * on: it cannot know the app's internal resource id, only the name it ships its
-     * replacement under. `mipmap/ic_launcher` in the app is `drawable/ic_launcher` in
-     * the pack, so only the part after the slash is used.
      */
     private fun load(
         context: Context,
         pack: String,
-        component: ComponentName,
+        intent: Intent,
     ): Drawable? {
         val pm = context.packageManager
-        val activity = pm.getActivityInfo(component, 0)
-        val target = pm.getResourcesForApplication(activity.applicationInfo)
-        val iconName = target.getResourceName(activity.icon)
-        val packResources = pm.getResourcesForApplication(pack)
-        val id = packResources.getIdentifier(iconName.substringAfterLast('/'), "drawable", pack)
-        if (id == 0) return null
-        return packResources.getDrawable(id, null)
+        val component = intent.component ?: return null
+
+        return try {
+            val activity = pm.getActivityInfo(component, 0)
+            val iconId = activity.iconResource
+            if (iconId == 0) return null
+
+            val activityResources = pm.getResourcesForApplication(activity.applicationInfo)
+            val iconName = activityResources.getResourceEntryName(iconId)
+
+            val packResources = pm.getResourcesForApplication(pack)
+            val id = packResources.getIdentifier(iconName, "drawable", pack)
+            if (id == 0) return null
+
+            packResources.getDrawable(id, null)
+        } catch (_: PackageManager.NameNotFoundException) {
+            null
+        } catch (_: Resources.NotFoundException) {
+            null
+        }
     }
 }
