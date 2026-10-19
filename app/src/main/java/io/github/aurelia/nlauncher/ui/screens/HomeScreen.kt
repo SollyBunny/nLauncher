@@ -26,6 +26,7 @@ import io.github.aurelia.nlauncher.ui.FavoriteViews
 import io.github.aurelia.nlauncher.ui.GestureSurfaceLayout
 import io.github.aurelia.nlauncher.ui.SWIPE_MIN_DP
 import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.WIDGET_GAP_DP
 import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.padForSystemBars
 import java.util.Date
@@ -185,6 +186,7 @@ class HomeScreen(
     private fun populateWidgets() {
         widgetsContainer.removeAllViews()
         widgetViews.clear()
+        val widgetGap = (WIDGET_GAP_DP * activity.resources.displayMetrics.density).toInt()
         for (widget in LauncherConfig.widgets(activity)) {
             val view = WidgetViews.create(activity, widget)
             // Tapping a widget opens the clock app. The click is claimed by the
@@ -192,10 +194,13 @@ class HomeScreen(
             view.setOnClickListener { openClock() }
             widgetsContainer.addView(
                 view,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                ),
+                LinearLayout
+                    .LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply {
+                        setMargins(0, 0, 0, widgetGap)
+                    },
             )
             widgetViews.add(widget to view)
         }
