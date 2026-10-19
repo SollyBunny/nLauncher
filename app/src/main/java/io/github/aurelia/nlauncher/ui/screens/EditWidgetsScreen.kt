@@ -1,7 +1,6 @@
 package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.AlertDialog
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -13,6 +12,7 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
 import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.DragToReorder
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.WidgetViews
@@ -108,8 +108,22 @@ class EditWidgetsScreen(
             ),
         )
 
-        row.findViewById<View>(R.id.widget_handle).setOnTouchListener(DragTouchListener(row))
         row.findViewById<View>(R.id.widget_delete).setOnClickListener { removeWidget(index) }
+
+        // The widget rows come first here and the "+ Add widget" row after them, so a
+        // widget row's place in the container is its place in the list.
+        DragToReorder(
+            row = row,
+            size = { widgets.size },
+            childAt = { widgetsContainer.getChildAt(it) },
+            indexOfRow = { widgetsContainer.indexOfChild(row) },
+            onDrop = { from, to ->
+                widgets.add(to, widgets.removeAt(from))
+                LauncherConfig.saveWidgets(activity, widgets)
+            },
+            onChanged = ::populate,
+        ).attach(row.findViewById(R.id.widget_handle))
+
         widgetsContainer.addView(row)
     }
 
@@ -129,70 +143,6 @@ class EditWidgetsScreen(
         LauncherConfig.saveWidgets(activity, widgets)
         populate()
     }
-
-    /** Drag a row by its handle to reorder it. */
-    private inner class DragTouchListener(
-        private val row: View,
-    ) : View.OnTouchListener {
-        private var startRawY = 0f
-        private var dragging = false
-
-        override fun onTouch(
-            v: View,
-            event: MotionEvent,
-        ): Boolean {
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    dragging = true
-                    startRawY = event.rawY
-                    row.elevation = dp(8f).toFloat()
-                    row.parent?.requestDisallowInterceptTouchEvent(true)
-                    return true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    if (dragging) row.translationY = event.rawY - startRawY
-                    return true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (dragging) {
-                        dragging = false
-                        row.parent?.requestDisallowInterceptTouchEvent(false)
-                        dropWidget(row)
-                    }
-                    return true
-                }
-            }
-            return false
-        }
-    }
-
-    private fun dropWidget(row: View) {
-        // Widget rows come first, the "+ Add widget" row after them, so a widget
-        // row's place in the container is its place in the list.
-        val from = widgetsContainer.indexOfChild(row)
-        if (from < 0 || from >= widgets.size) {
-            populate()
-            return
-        }
-
-        val center = row.top + row.translationY + row.height / 2f
-        var to = 0
-        for (i in widgets.indices) {
-            if (i == from) continue
-            // Skip anything unexpected rather than letting a missing child crash
-            // the drag.
-            val other = widgetsContainer.getChildAt(i) ?: continue
-            if (center > other.top + other.height / 2f) to++
-        }
-
-        if (to != from) {
-            widgets.add(to, widgets.removeAt(from))
-            LauncherConfig.saveWidgets(activity, widgets)
-        }
-        populate()
-    }
-
-    private fun dp(value: Float): Int = (value * activity.resources.displayMetrics.density).toInt()
 
     companion object {
         const val KEY = "edit_widgets"

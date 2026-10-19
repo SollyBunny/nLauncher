@@ -1,7 +1,6 @@
 package io.github.aurelia.nlauncher.ui.screens
 
 import android.content.Intent
-import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -13,6 +12,7 @@ import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
+import io.github.aurelia.nlauncher.ui.DragToReorder
 import io.github.aurelia.nlauncher.ui.FavoriteViews
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
@@ -92,8 +92,22 @@ class EditFavoritesScreen(
             ),
         )
 
-        row.findViewById<View>(R.id.favorite_handle).setOnTouchListener(DragTouchListener(row))
         row.findViewById<View>(R.id.favorite_delete).setOnClickListener { removeFavorite(index) }
+
+        // The container holds the "+ Add favorite" row first, so row i of the list is
+        // child i + 1.
+        DragToReorder(
+            row = row,
+            size = { favorites.size },
+            childAt = { favoritesContainer.getChildAt(it + 1) },
+            indexOfRow = { favoritesContainer.indexOfChild(row) - 1 },
+            onDrop = { from, to ->
+                favorites.add(to, favorites.removeAt(from))
+                LauncherConfig.saveFavorites(activity, favorites)
+            },
+            onChanged = ::populate,
+        ).attach(row.findViewById(R.id.favorite_handle))
+
         favoritesContainer.addView(row)
     }
 
@@ -113,69 +127,6 @@ class EditFavoritesScreen(
         LauncherConfig.saveFavorites(activity, favorites)
         populate()
     }
-
-    /** Drag a row by its handle to reorder it. */
-    private inner class DragTouchListener(
-        private val row: View,
-    ) : View.OnTouchListener {
-        private var startRawY = 0f
-        private var dragging = false
-
-        override fun onTouch(
-            v: View,
-            event: MotionEvent,
-        ): Boolean {
-            when (event.actionMasked) {
-                MotionEvent.ACTION_DOWN -> {
-                    dragging = true
-                    startRawY = event.rawY
-                    row.elevation = dp(8f).toFloat()
-                    row.parent?.requestDisallowInterceptTouchEvent(true)
-                    return true
-                }
-                MotionEvent.ACTION_MOVE -> {
-                    if (dragging) row.translationY = event.rawY - startRawY
-                    return true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (dragging) {
-                        dragging = false
-                        row.parent?.requestDisallowInterceptTouchEvent(false)
-                        dropFavorite(row)
-                    }
-                    return true
-                }
-            }
-            return false
-        }
-    }
-
-    private fun dropFavorite(row: View) {
-        // The first child is the "+ Add favorite" row; favorite rows follow it.
-        val from = favoritesContainer.indexOfChild(row) - 1
-        if (from < 0 || from >= favorites.size) {
-            populate()
-            return
-        }
-
-        val center = row.top + row.translationY + row.height / 2f
-        var to = 0
-        for (i in favorites.indices) {
-            if (i == from) continue
-            // Rows are laid out as [add] + favorites; skip anything unexpected
-            // rather than letting a missing child crash the drag.
-            val other = favoritesContainer.getChildAt(i + 1) ?: continue
-            if (center > other.top + other.height / 2f) to++
-        }
-
-        if (to != from) {
-            favorites.add(to, favorites.removeAt(from))
-            LauncherConfig.saveFavorites(activity, favorites)
-        }
-        populate()
-    }
-
-    private fun dp(value: Float): Int = (value * activity.resources.displayMetrics.density).toInt()
 
     companion object {
         const val KEY = "edit_favorites"
