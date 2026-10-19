@@ -10,14 +10,6 @@ import java.util.concurrent.Executors
 
 /**
  * The apps that can be launched, listed once and kept in memory.
- *
- * The list is resolved on a background thread, and the launcher asks for it as soon
- * as it starts ([LauncherActivity] calls [init]), so opening the search finds
- * the labels already there instead of paying for a package query on the spot. [apps]
- * hands the list to [onReady] on the main thread — immediately when it is already
- * cached, otherwise as soon as the resolver has finished with it. Icons are left
- * alone: they stream in through [Icons] and [onIconsLoaded] is the refresh to run
- * once they have all landed. The list is dropped whenever packages change.
  */
 object AppCatalog {
     /** The package query never races itself: one background thread does all of it. */
@@ -33,16 +25,6 @@ object AppCatalog {
 
     /** Told about the list once it has been resolved; one shot per waiter. */
     private val ready = mutableListOf<(List<AppEntry>) -> Unit>()
-
-    /**
-     * The refresh to run once the current list's icons have all landed.
-     *
-     * Held only for as long as a load is actually on its way and cleared the moment
-     * it is handed over: it is a lambda owned by whichever screen asked for the list,
-     * so leaving it here past that point keeps a destroyed activity alive for the life
-     * of the process.
-     */
-    private var iconsRefresh: (() -> Unit)? = null
 
     /** One launchable app: what its rows show, and what picking it launches. */
     class AppEntry(
@@ -87,7 +69,6 @@ object AppCatalog {
     fun apps(
         context: Context,
         onReady: (List<AppEntry>) -> Unit,
-        onIconsLoaded: () -> Unit = {},
     ) {
         val existing = cached
         if (existing != null) {
@@ -96,7 +77,6 @@ object AppCatalog {
             onReady(existing)
             return
         }
-        iconsRefresh = onIconsLoaded
         ready += onReady
         resolve(context)
     }

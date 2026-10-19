@@ -80,7 +80,6 @@ class SearchScreen(
         AppCatalog.apps(
             activity,
             onReady = { apps -> show(apps) },
-            onIconsLoaded = { adapter?.notifyDataSetChanged() },
         )
 
         // Keep the search bar clear of the status bar and the results clear of the
