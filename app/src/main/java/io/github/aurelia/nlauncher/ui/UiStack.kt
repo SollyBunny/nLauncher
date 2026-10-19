@@ -175,8 +175,18 @@ class UiStack(
  * the screen wants below the status bar (for a bar that carries its own padding).
  * Bars *inside* a screen must keep their plain layout padding, otherwise the same
  * inset is counted twice and they drift down the screen.
+ *
+ * [ime] also makes room for the keyboard, for the one screen that opens one. It is
+ * sized by the system and reported as an inset of its own, so the room it needs is
+ * read from the window rather than guessed at. The window will not resize for it
+ * (the activity handles `screenSize` itself, so the system never shrinks it), which
+ * is exactly why this has to be done here. Below API 30 there is no separate IME
+ * inset and the window is resized for the keyboard instead.
  */
-fun View.padForSystemBars(topExtraDp: Float = 0f) {
+fun View.padForSystemBars(
+    topExtraDp: Float = 0f,
+    ime: Boolean = false,
+) {
     val start = paddingStart
     val end = paddingEnd
     val top = paddingTop
@@ -186,16 +196,22 @@ fun View.padForSystemBars(topExtraDp: Float = 0f) {
     setOnApplyWindowInsetsListener { view, insets ->
         val status: Int
         val nav: Int
+        val keyboard: Int
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             status = insets.getInsets(WindowInsets.Type.statusBars()).top
             nav = insets.getInsets(WindowInsets.Type.navigationBars()).bottom
+            keyboard = if (ime) insets.getInsets(WindowInsets.Type.ime()).bottom else 0
         } else {
             @Suppress("DEPRECATION")
             status = insets.systemWindowInsetTop
             @Suppress("DEPRECATION")
             nav = insets.systemWindowInsetBottom
+            keyboard = 0
         }
-        view.setPaddingRelative(start, top + status + topExtra, end, bottom + nav)
+        // The keyboard is measured from the bottom of the window, so when it is up its
+        // inset already covers the navigation bar it sits over; only one of the two is
+        // the room that is actually taken.
+        view.setPaddingRelative(start, top + status + topExtra, end, bottom + maxOf(nav, keyboard))
         insets
     }
 }

@@ -17,6 +17,7 @@ import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
+import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import io.github.aurelia.nlauncher.AppCatalog
@@ -37,6 +38,10 @@ import kotlin.math.roundToInt
  * to the A-Z index, filtered as you type. Tapping a result picks it; long-pressing
  * one opens that app's own settings page. Like the rest of the launcher it paints
  * nothing of its own, so the live wallpaper stays visible (and interactive) behind it.
+ *
+ * The screen makes room for the keyboard itself (the window will not), and the index
+ * is one scrollable column, so neither the results nor the far end of the alphabet is
+ * left behind it.
  */
 class SearchScreen(
     private val activity: LauncherActivity,
@@ -53,11 +58,10 @@ class SearchScreen(
 
     private val searchInput: EditText = view.findViewById(R.id.search_input)
     private val listContainer: FrameLayout = view.findViewById(R.id.list_container)
-    private val letterBar = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
+    private val letterBar = ScrollView(activity)
 
     /** Every index cell, built once; the filter hides the ones it has no results for. */
     private val letterCells = mutableMapOf<Char, TextView>()
-    private val letterColumns = mutableListOf<LinearLayout>()
     private var letterCellSize = 0
     private var highlighted: Char? = null
 
@@ -75,10 +79,11 @@ class SearchScreen(
         )
 
         // Keep the search bar clear of the status bar and the results clear of the
-        // navigation bar, both on the root. Reading the insets the window actually
-        // applied is what keeps this right: the bar's own size is not always what the
-        // window reserved for it, and guessing leaves a gap above the search bar.
-        view.padForSystemBars()
+        // navigation bar and the keyboard, both on the root. Reading the insets the
+        // window actually applied is what keeps this right: the bar's own size is not
+        // always what the window reserved for it, and guessing leaves a gap above the
+        // search bar.
+        view.padForSystemBars(ime = true)
     }
 
     /** Draw the results, or explain that there is nothing to pick. */
@@ -105,9 +110,6 @@ class SearchScreen(
             activity
                 .getSystemService(InputMethodManager::class.java)
                 ?.showSoftInput(searchInput, 0)
-            // The list container is measured only once this screen is laid out, so the
-            // index cells can only be sized against the real height from here on.
-            sizeLetterCells()
         }
     }
 
@@ -147,7 +149,7 @@ class SearchScreen(
             letterBar,
             LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.MATCH_PARENT,
             ),
         )
         row.addView(results, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1f))
@@ -194,60 +196,35 @@ class SearchScreen(
             updateLetters()
             highlightVisibleLetter()
         }
-        // If the screen has been laid out already (the list arrived after the push),
-        // size the index now — the next activation is a long way off.
-        sizeLetterCells()
     }
 
     /**
-     * Every letter the index can show, built once in two columns against the top-left
-     * corner. Filtering hides cells rather than rebuilding them, so typing stays
-     * allocation free.
+     * Every letter the index can show, in the one column, built once. Filtering hides
+     * cells rather than rebuilding them, so typing stays allocation free.
+     *
+     * The column scrolls, which is what keeps the whole alphabet reachable with the
+     * keyboard up: one column of 26 letters plus '#' is taller than what is left of
+     * the screen then, and shrinking the cells to fit would leave them unreadable.
      */
     private fun buildLetterBar() {
-        val perColumn = (ALL_LETTERS.size + 1) / 2
-        val placeholder = (LETTER_CELL_PLACEHOLDER_DP * activity.resources.displayMetrics.density).roundToInt()
+        letterBar.removeAllViews()
         letterCells.clear()
-        letterColumns.clear()
-        for (columnLetters in ALL_LETTERS.chunked(perColumn)) {
-            val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-            for (letter in columnLetters) {
-                val cellView = TextView(activity)
-                cellView.text = letter.uppercaseChar().toString()
-                cellView.textSize = LETTER_TEXT_SIZE
-                cellView.gravity = Gravity.CENTER
-                cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-                cellView.setOnClickListener { jumpTo(letter) }
-                cellView.visibility = View.GONE
-                letterCells[letter] = cellView
-                column.addView(cellView, LinearLayout.LayoutParams(placeholder, placeholder))
-            }
-            letterColumns += column
-            letterBar.addView(column, LinearLayout.LayoutParams(placeholder, ViewGroup.LayoutParams.WRAP_CONTENT))
-        }
-    }
+        val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        for (letter in ALL_LETTERS) {
+            val cellView = TextView(activity)
+            cellView.text = letter.uppercaseChar().toString()
+            cellView.textSize = APP_LABEL_TEXT_SIZE
+            cellView.gravity = Gravity.CENTER
+            cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
+            cellView.setOnClickListener { jumpTo(letter) }
+            cellView.visibility = View.GONE
+            letterCells[letter] = cellView
 
-    /**
-     * Give every cell an equal share of the available height. The worst case is a full
-     * alphabet plus '#' (26 + 1), so that is what each cell is sized against: the index
-     * keeps its proportions as the filter changes which letters are showing. Before the
-     * first layout the height is unknown, so the cells keep their placeholder size until
-     * [sizeLetterCells] can do better.
-     */
-    private fun sizeLetterCells() {
-        // Nothing to size until the list has been built and with it the cells.
-        if (letterCells.isEmpty()) return
-        val available = listContainer.height - listContainer.paddingBottom
-        if (available <= 0) return
-        val cell = available / ALL_LETTERS.size
-        if (cell == letterCellSize) return
-        letterCellSize = cell
-        for (cellView in letterCells.values) {
-            cellView.layoutParams = LinearLayout.LayoutParams(cell, cell)
+            val textHeight = cellView.paint.fontMetrics.let { it.descent - it.ascent }
+            val cellSize = (textHeight * 1.5f).roundToInt()
+            column.addView(cellView, LinearLayout.LayoutParams(cellSize, cellSize))
         }
-        for (column in letterColumns) {
-            column.layoutParams = LinearLayout.LayoutParams(cell, ViewGroup.LayoutParams.WRAP_CONTENT)
-        }
+        letterBar.addView(column)
     }
 
     /** Show the letters the current results actually have, and hide the rest. */
@@ -276,6 +253,13 @@ class SearchScreen(
             cell.setTextColor(
                 activity.getColor(if (current) R.color.text_primary else R.color.icon_tint_muted),
             )
+        }
+        // Scroll the highlighted letter into the middle of the scrollable index column.
+        val letterCell = letterCells[letter]
+        if (letterCell != null) {
+            val top = letterCell.top
+            val bottom = letterCell.bottom
+            letterBar.smoothScrollTo(0, top - letterBar.height / 2 + (bottom - top) / 2)
         }
     }
 
@@ -387,12 +371,6 @@ class SearchScreen(
 
     companion object {
         const val KEY = "search"
-
-        /** Text size (sp) of the A-Z index letters down the side of the picker. */
-        private const val LETTER_TEXT_SIZE = 16f
-
-        /** Cell size (dp) before the screen has been laid out and can be measured. */
-        private const val LETTER_CELL_PLACEHOLDER_DP = 22
 
         /** Every letter the index can show: '#' for non-letters, then the alphabet. */
         private val ALL_LETTERS: List<Char> = listOf(NON_LETTER) + ('a'..'z').toList()
