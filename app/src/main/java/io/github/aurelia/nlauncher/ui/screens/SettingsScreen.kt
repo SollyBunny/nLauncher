@@ -29,9 +29,7 @@ class SettingsScreen(
 
     init {
         // The menu sits directly on the home screen, so there is nothing to go back to.
-        view.findViewById<View>(R.id.settings_back).visibility = View.GONE
-        view.findViewById<TextView>(R.id.settings_title).setText(R.string.app_name)
-        view.padForSystemBars()
+        setHeader(activity, view, R.string.app_name, showBack = false)
 
         val list = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         list.addView(menuRow(R.string.menu_favorites) { activity.pushEditFavorites() })
@@ -71,3 +69,28 @@ internal fun scrollableRows(
             ),
         )
     }
+
+/**
+ * The header every screen sharing [R.layout.screen_settings] wears: its title, and
+ * the way out of it.
+ *
+ * The two 40dp slots on the left hold one icon at a time — the launcher icon on the
+ * screen you enter the settings at, the back arrow on every screen below it, which is
+ * what a submenu of the settings should offer. They are the same size and padding, so
+ * the title does not move between them.
+ */
+internal fun setHeader(
+    activity: LauncherActivity,
+    view: View,
+    titleRes: Int,
+    showBack: Boolean,
+) {
+    view.findViewById<View>(R.id.settings_back).apply {
+        visibility = if (showBack) View.VISIBLE else View.GONE
+        if (showBack) setOnClickListener { activity.back() }
+    }
+    view.findViewById<View>(R.id.settings_app_icon).visibility =
+        if (showBack) View.GONE else View.VISIBLE
+    view.findViewById<TextView>(R.id.settings_title).setText(titleRes)
+    view.padForSystemBars()
+}

@@ -13,7 +13,6 @@ import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
-import io.github.aurelia.nlauncher.ui.padForSystemBars
 
 /**
  * The gesture bindings, one row per gesture showing the action bound to it. Binding
@@ -32,9 +31,9 @@ class GesturesScreen(
     private val gesturesList = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
 
     init {
-        view.findViewById<View>(R.id.settings_back).setOnClickListener { activity.back() }
-        view.findViewById<TextView>(R.id.settings_title).setText(R.string.menu_gestures)
-        view.padForSystemBars()
+        // A screen below the settings menu, so it gets the back arrow rather than the
+        // launcher icon.
+        setHeader(activity, view, R.string.menu_gestures, showBack = true)
 
         val content: FrameLayout = view.findViewById(R.id.settings_content)
         content.addView(scrollableRows(activity, gesturesList))
