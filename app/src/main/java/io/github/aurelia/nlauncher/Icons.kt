@@ -33,13 +33,15 @@ object Icons {
      * One cached icon, kept only as a source to draw from: a drawable is stateful, and
      * one instance shared between views ends up drawn as the wrong icon (or not
      * redrawn at all) as soon as two of them show it. [new] hands out a private copy.
+     *
+     * There is deliberately no fallback to a cached drawable, so an icon with no
+     * [Drawable.ConstantState] to copy from is simply not cacheable — see [deliver].
      */
     private class Entry(
         private val resources: Resources,
-        private val state: Drawable.ConstantState?,
-        private val drawable: Drawable,
+        private val state: Drawable.ConstantState,
     ) {
-        fun new(): Drawable = state?.newDrawable(resources)?.mutate() ?: drawable
+        fun new(): Drawable? = state.newDrawable(resources)?.mutate()
     }
 
     private val cache = mutableMapOf<String, Entry>()
@@ -148,13 +150,25 @@ object Icons {
         // it out of the caches.
         if (!loading.remove(key)) return
         val waiters = waiting.remove(key).orEmpty()
-        if (icon == null) {
-            failed += key
-            waiters.forEach { it(null) }
-        } else {
-            val entry = Entry(resources, icon.constantState, icon)
-            cache[key] = entry
-            waiters.forEach { it(entry.new()) }
+        // A drawable with no constant state cannot be copied, and handing that one
+        // instance out to every row is exactly the bug this cache exists to prevent —
+        // so it counts as an icon that could not be loaded, same as a null return.
+        val state = icon?.constantState
+        if (state == null) {
+            fail(key, waiters)
+            return
         }
+        val entry = Entry(resources, state)
+        cache[key] = entry
+        waiters.forEach { it(entry.new()) }
+    }
+
+    /** Remember [key] as unloadable and tell everyone waiting that it is never coming. */
+    private fun fail(
+        key: String,
+        waiters: List<(Drawable?) -> Unit>,
+    ) {
+        failed += key
+        waiters.forEach { it(null) }
     }
 }
