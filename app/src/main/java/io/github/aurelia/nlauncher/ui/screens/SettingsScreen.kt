@@ -35,6 +35,7 @@ class SettingsScreen(
         list.addView(menuRow(R.string.menu_favorites) { activity.pushEditFavorites() })
         list.addView(menuRow(R.string.menu_widgets) { activity.pushEditWidgets() })
         list.addView(menuRow(R.string.menu_gestures) { activity.pushGestures() })
+        list.addView(menuRow(R.string.menu_look_and_feel) { activity.pushLookAndFeel() })
         val content: FrameLayout = view.findViewById(R.id.settings_content)
         content.addView(scrollableRows(activity, list))
     }

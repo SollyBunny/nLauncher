@@ -54,12 +54,13 @@ class HomeScreen(
     private val wallpaperManager = WallpaperManager.getInstance(activity)
 
     /**
-     * The favorites currently on screen, and the package revision they were built at.
-     * Together they decide whether the column still matches what is stored — see
-     * [populateFavorites].
+     * The favorites currently on screen, the package revision they were built at, and
+     * the icon setting they were built with. Together they decide whether the column
+     * still matches what is stored — see [populateFavorites].
      */
     private var favorites: List<FavoriteApp> = emptyList()
     private var renderedRevision = -1
+    private var renderedIcons: String? = null
     private var actions: Map<Gesture, GestureAction> = emptyMap()
 
     private val gestures: GestureDetector
@@ -216,14 +217,23 @@ class HomeScreen(
      * The package revision is part of the check because rows only ask [Icons] for
      * their icon as they are created: when a package changes, the icon cache is
      * dropped underneath them, and the column has to be built again to pick the new
-     * icons up.
+     * icons up. The icon setting is part of it for the same reason: a row only finds
+     * out whether it shows an icon as it is built, so changing the setting has to
+     * rebuild the column or the rows keep drawing what they were built with.
      */
     private fun populateFavorites() {
         val stored = LauncherConfig.favorites(activity)
         val revision = PackageWatcher.revision
-        if (revision == renderedRevision && favorites.map { it.key } == stored.map { it.key }) return
+        val icons = iconSetting()
+        if (revision == renderedRevision &&
+            icons == renderedIcons &&
+            favorites.map { it.key } == stored.map { it.key }
+        ) {
+            return
+        }
         favorites = stored
         renderedRevision = revision
+        renderedIcons = icons
 
         favoritesContainer.removeAllViews()
         for (favorite in favorites) {
@@ -236,6 +246,9 @@ class HomeScreen(
             favoritesContainer.addView(row)
         }
     }
+
+    /** What the rows would be built with icon-wise, as one comparable value. */
+    private fun iconSetting(): String = "${LauncherConfig.iconsShown(activity)}/${LauncherConfig.iconPack(activity)}"
 
     private fun trigger(gesture: Gesture) {
         when (val action = actions[gesture] ?: GestureAction.None) {

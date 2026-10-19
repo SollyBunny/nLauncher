@@ -8,6 +8,7 @@ import android.widget.ImageView
 import android.widget.TextView
 import io.github.aurelia.nlauncher.FavoriteApp
 import io.github.aurelia.nlauncher.Favorites
+import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import kotlin.math.roundToInt
 
@@ -37,6 +38,10 @@ object FavoriteViews {
         icon.tag = favorite.key
         label.text = Favorites.label(context, favorite)
         label.textSize = APP_LABEL_TEXT_SIZE
+
+        // With icons turned off in Look and feel the row is just the label, so the
+        // icon view goes away rather than leaving an empty gap where it was.
+        icon.visibility = if (LauncherConfig.iconsShown(context)) View.VISIBLE else View.GONE
 
         // Icons sit at ICON_TEXT_SCALE times the label's text size.
         val size = (label.textSize * ICON_TEXT_SCALE).roundToInt()

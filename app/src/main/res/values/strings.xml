@@ -8,9 +8,17 @@
     <string name="launch_security_exception">Not allowed to launch %1$s</string>
 
     <!-- Settings menu / screens -->
+    <string name="menu_look_and_feel">Look and feel</string>
     <string name="menu_favorites">Favorite apps</string>
     <string name="menu_widgets">Widgets</string>
     <string name="menu_gestures">Gestures</string>
+
+    <!-- Icon pack, under Look and feel -->
+    <string name="icon_pack">Icon pack</string>
+    <string name="icon_pack_default">Default</string>
+    <string name="icon_pack_custom">Custom</string>
+    <string name="icon_pack_disabled">Disabled</string>
+    <string name="icon_pack_none">No icon packs installed.</string>
 
     <!-- Favorites edit -->
     <string name="edit_favorites">Edit favorites</string>

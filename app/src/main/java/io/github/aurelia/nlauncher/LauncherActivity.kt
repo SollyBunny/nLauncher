@@ -16,6 +16,7 @@ import io.github.aurelia.nlauncher.ui.screens.EditFavoritesScreen
 import io.github.aurelia.nlauncher.ui.screens.EditWidgetsScreen
 import io.github.aurelia.nlauncher.ui.screens.GesturesScreen
 import io.github.aurelia.nlauncher.ui.screens.HomeScreen
+import io.github.aurelia.nlauncher.ui.screens.LookAndFeelScreen
 import io.github.aurelia.nlauncher.ui.screens.SearchScreen
 import io.github.aurelia.nlauncher.ui.screens.SettingsScreen
 
@@ -41,6 +42,7 @@ class LauncherActivity : Activity() {
     private val editWidgets by lazy { EditWidgetsScreen(this) }
     private val settings by lazy { SettingsScreen(this) }
     private val gestures by lazy { GesturesScreen(this) }
+    private val lookAndFeel by lazy { LookAndFeelScreen(this) }
 
     /** One search screen, reused, so opening it again costs nothing to build. */
     private val search by lazy { SearchScreen(this) }
@@ -147,6 +149,11 @@ class LauncherActivity : Activity() {
         stack.push(gestures)
     }
 
+    /** The settings that change how the launcher looks. */
+    fun pushLookAndFeel() {
+        stack.push(lookAndFeel)
+    }
+
     /**
      * App search. When [hideAfter] is false the screen stays up after a pick — the
      * gesture that opens it that way is for browsing, and closing the list under the
@@ -193,6 +200,7 @@ class LauncherActivity : Activity() {
             EditWidgetsScreen.KEY -> editWidgets
             SettingsScreen.KEY -> settings
             GesturesScreen.KEY -> gestures
+            LookAndFeelScreen.KEY -> lookAndFeel
             // A restored search has nobody left to report a pick to.
             SearchScreen.KEY -> search.also { it.onPicked = {} }
             else -> null

@@ -22,6 +22,7 @@ import android.widget.TextView
 import android.widget.Toast
 import io.github.aurelia.nlauncher.AppCatalog
 import io.github.aurelia.nlauncher.LauncherActivity
+import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SIZE
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
@@ -359,6 +360,9 @@ class SearchScreen(
                 onAppSettings(entry)
                 true
             }
+
+            // With icons turned off in Look and feel the row is just the label.
+            icon.visibility = if (LauncherConfig.iconsShown(activity)) View.VISIBLE else View.GONE
 
             // Icons sit at ICON_TEXT_SCALE times the label's text size.
             val size = (label.textSize * ICON_TEXT_SCALE).roundToInt()

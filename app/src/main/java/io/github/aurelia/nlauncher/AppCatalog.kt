@@ -231,6 +231,6 @@ object AppCatalog {
     ): (() -> Drawable?)? {
         val component = entry.intent.component ?: return null
         val pm = context.applicationContext.packageManager
-        return { pm.getActivityIcon(component) }
+        return { IconPacks.icon(context, component) ?: pm.getActivityIcon(component) }
     }
 }

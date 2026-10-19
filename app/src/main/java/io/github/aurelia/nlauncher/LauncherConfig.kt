@@ -60,6 +60,8 @@ object LauncherConfig {
     private const val PREFS = "nlauncher"
     private const val KEY_FAVORITES = "favorites"
     private const val KEY_WIDGETS = "widgets"
+    private const val KEY_ICON_PACK = "icon_pack"
+    private const val KEY_ICONS_SHOWN = "icons_shown"
 
     // Parsing a stored favorite means an Intent.parseUri per entry, and the launcher
     // asks for them on every Home press, so the parsed list is kept against the exact
@@ -118,6 +120,32 @@ object LauncherConfig {
     ) {
         val raw = widgets.joinToString("\n") { it.key }
         prefs(context).edit().putString(KEY_WIDGETS, raw).apply()
+    }
+
+    /**
+     * The chosen icon pack's package, or null for the system icons.
+     *
+     * The package is stored rather than anything about the pack itself, so a pack that
+     * is uninstalled simply stops being found and the launcher falls back to the system
+     * icons without anything having to be cleaned up.
+     */
+    fun iconPack(context: Context): String? = prefs(context).getString(KEY_ICON_PACK, null)?.takeIf { it.isNotBlank() }
+
+    fun saveIconPack(
+        context: Context,
+        pack: String?,
+    ) {
+        prefs(context).edit().putString(KEY_ICON_PACK, pack).apply()
+    }
+
+    /** Whether app icons are shown at all: all of them, one pack's, or none. */
+    fun iconsShown(context: Context): Boolean = prefs(context).getBoolean(KEY_ICONS_SHOWN, true)
+
+    fun saveIconsShown(
+        context: Context,
+        shown: Boolean,
+    ) {
+        prefs(context).edit().putBoolean(KEY_ICONS_SHOWN, shown).apply()
     }
 
     fun gestureActions(context: Context): Map<Gesture, GestureAction> = Gesture.entries.associateWith { gestureAction(context, it) }
