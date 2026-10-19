@@ -14,6 +14,16 @@ object PackageWatcher {
     private val callbacks = mutableSetOf<() -> Unit>()
     private var receiver: BroadcastReceiver? = null
 
+    /**
+     * Bumped whenever a package is installed, removed or replaced.
+     *
+     * Anything rendering package-derived data can remember what it last drew at this
+     * value and redraw when it moves, instead of having to register a listener of its
+     * own just to find out that what it is showing has gone stale.
+     */
+    var revision: Int = 0
+        private set
+
     fun onPackagesChanged(
         context: Context,
         callback: () -> Unit,
@@ -27,6 +37,12 @@ object PackageWatcher {
                     context: Context?,
                     intent: Intent?,
                 ) {
+                    revision += 1
+                    // The icon cache is dropped here rather than by whichever cache
+                    // happens to hold icons: it is the one thing that has to go on any
+                    // package change, and leaving it to a listener meant it silently
+                    // stopped happening whenever nothing had resolved a favorite yet.
+                    Icons.clear()
                     for (callback in callbacks.toList()) callback()
                 }
             }

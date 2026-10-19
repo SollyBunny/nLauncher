@@ -68,9 +68,8 @@ object Favorites {
     private fun watch(context: Context) {
         if (watching) return
         watching = true
-        PackageWatcher.onPackagesChanged(context) {
-            labels.clear()
-            Icons.clear()
-        }
+        // Only the labels are this cache's to drop; the icon cache is cleared by
+        // PackageWatcher itself, which is the only thing that knows a package changed.
+        PackageWatcher.onPackagesChanged(context) { labels.clear() }
     }
 }
