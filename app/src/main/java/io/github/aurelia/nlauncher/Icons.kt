@@ -41,7 +41,7 @@ object Icons {
         private val resources: Resources,
         private val state: Drawable.ConstantState,
     ) {
-        fun new(): Drawable? = state.newDrawable(resources)?.mutate()
+        fun new(): Drawable = state.newDrawable(resources).mutate()
     }
 
     private val cache = mutableMapOf<String, Entry>()

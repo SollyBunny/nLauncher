@@ -122,24 +122,17 @@ class HomeScreen(
         // itself answers performClick: that is what lets an accessibility service
         // reach the wallpaper the same way a tap does.
         view.onSurfaceClick = { forwardTapToWallpaper(view.tapX, view.tapY) }
-        view.setOnTouchListener(
-            object : View.OnTouchListener {
-                override fun onTouch(
-                    v: View,
-                    event: MotionEvent,
-                ): Boolean {
-                    gestures.onTouchEvent(event)
-                    trackSwipe(event)
-                    if (event.actionMasked == MotionEvent.ACTION_UP) {
-                        view.tapX = event.x
-                        view.tapY = event.y
-                        // A swipe already claimed this touch; a tap is what is left.
-                        if (!gestureFired) v.performClick()
-                    }
-                    return true
-                }
-            },
-        )
+        view.setOnTouchListener { v, event ->
+            gestures.onTouchEvent(event)
+            trackSwipe(event)
+            if (event.actionMasked == MotionEvent.ACTION_UP) {
+                view.tapX = event.x
+                view.tapY = event.y
+                // A swipe already claimed this touch; a tap is what is left.
+                if (!gestureFired) v.performClick()
+            }
+            true
+        }
 
         // Keep the favorites clear of the navigation bar, and the widgets below the
         // status bar with their own breathing room on top.
