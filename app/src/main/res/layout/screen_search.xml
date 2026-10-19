@@ -33,6 +33,7 @@
             android:layout_weight="1"
             android:hint="@string/search_apps"
             android:imeOptions="actionSearch"
+            android:importantForAutofill="no"
             android:inputType="text"
             android:maxLines="1"
             android:paddingStart="12dp"

@@ -30,12 +30,16 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
-    buildFeatures {
-        buildConfig = true
-    }
-
     lint {
-        abortOnError = false
+        abortOnError = true
+        warningsAsErrors = false
+        // Every screen inflates its own root with a null parent on purpose: the
+        // UiStack attaches it and supplies the LayoutParams, and inflating with a
+        // parent here would apply the wrong ones.
+        disable += "InflateParams"
+        // Rows paint a ripple over a background that is either transparent (the
+        // wallpaper shows through) or already covered by an opaque screen.
+        disable += "Overdraw"
     }
 }
 
