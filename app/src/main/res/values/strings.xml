@@ -40,6 +40,8 @@
     <string name="icon_pack_custom">Custom</string>
     <string name="icon_pack_disabled">Disabled</string>
     <string name="icon_pack_none">No icon packs installed.</string>
+    <string name="icon_pack_not_found">Icon pack %1$s not installed</string>
+    <string name="icon_pack_load_error">Failed to load icon pack %1$s: %2$s</string>
 
     <!-- Favorites edit -->
     <string name="edit_favorites">Edit favorites</string>

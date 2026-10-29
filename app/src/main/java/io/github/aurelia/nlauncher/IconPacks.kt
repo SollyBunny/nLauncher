@@ -7,7 +7,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
-import android.util.Log
+import android.util.Xml
+import android.widget.Toast
 import org.xmlpull.v1.XmlPullParser
 import java.util.Locale
 
@@ -54,192 +55,159 @@ object IconPacks {
         return found.values.sortedBy { it.label.lowercase(Locale.ROOT) }
     }
 
-    fun icon(
-        context: Context,
-        pack: String,
-        intent: Intent,
-    ): Drawable? {
-        val pm = context.packageManager
-        // Icon packs index by ComponentName (app)
-        // If not present try to find what app would open if this intent were launched
-        val component = intent.component ?: pm.resolveActivity(
-            intent,
-            PackageManager.MATCH_DEFAULT_ONLY
-        )?.activityInfo?.let {
-            // Returning ComponentName from activityInfo may lead to incorrect values such as com.android.settings/com.android.settings.homepage.SettingsHomepageActivity
-            // So find in this package, find the first launcher activity
-            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-                setPackage(it.packageName)
-            }
+    class IconPackQuery {
+        val pack: String
+        private val resources: Resources?
+        private val drawableNames: HashMap<ComponentName, String>
+        private val resolvedIcons: HashMap<ComponentName, Int> = HashMap()
 
-            pm.queryIntentActivities(
-                launchIntent,
-                PackageManager.MATCH_DEFAULT_ONLY
-            ).firstOrNull()?.activityInfo?.let { activity ->
-                ComponentName(activity.packageName, activity.name)
-            }
-        } ?: return null
+        constructor(context: Context, pack: String) {
+            this.pack = pack
+            val appContext = context.applicationContext
 
-        val packResources = pm.getResourcesForApplication(pack)
+            var resources =
+                try {
+                    appContext.packageManager.getResourcesForApplication(pack)
+                } catch (e: PackageManager.NameNotFoundException) {
+                    Toast.makeText(context, context.getString(R.string.icon_pack_not_found, pack), Toast.LENGTH_SHORT).show()
+                    null
+                }
 
-        val mappedName =
-            findMappedIcon(
-                context,
-                packResources,
-                pack,
-                component,
-            )
+            this.drawableNames = try {
+                resources?.let { loadIcons(appContext, resources) }
+            } catch (e: Exception) {
+                Toast.makeText(context, context.getString(R.string.icon_pack_load_error, pack, e.message), Toast.LENGTH_SHORT).show()
+                resources = null
+                null
+            } ?: HashMap()
 
-        if (mappedName != null) {
-            val drawable =
-                getPackDrawable(
-                    packResources,
-                    pack,
-                    mappedName,
-                )
-
-            if (drawable != null) {
-                return drawable
-            }
+            this.resources = resources
         }
 
-        // Fallback for packs that use the original icon resource name.
-        val activity = pm.getActivityInfo(component, 0)
-        val iconId = activity.iconResource
+        @SuppressLint("DiscouragedApi")
+        private fun loadIcons(
+            context: Context,
+            resources: Resources,
+        ): HashMap<ComponentName, String> {
+            // Time sensitive
+            fun parse(parser: XmlPullParser): HashMap<ComponentName, String> {
+                val result = HashMap<ComponentName, String>(2048) // Prealloc
+                while (true) {
+                    when (parser.next()) {
+                        XmlPullParser.START_TAG -> {
+                            if (parser.name != "item") continue
+                            val componentValue = parser.getAttributeValue(null, "component")
+                            val drawableName = parser.getAttributeValue(null, "drawable")
 
-        if (iconId == 0) return null
+                            // Do 0 or 1 substrings instead of 2 with removePrefix/Suffix
+                            val value = componentValue ?: continue
+                            val start =
+                                if (value.startsWith("ComponentInfo{")) {
+                                    "ComponentInfo{".length
+                                } else {
+                                    0
+                                }
+                            val end =
+                                if (value.endsWith("}")) {
+                                    value.length - 1
+                                } else {
+                                    value.length
+                                }
+                            val normalized =
+                                if (start == 0 && end == value.length) {
+                                    value
+                                } else {
+                                    value.substring(start, end)
+                                }
 
-        val activityResources =
-            pm.getResourcesForApplication(activity.applicationInfo)
-
-        val iconName =
-            activityResources.getResourceEntryName(iconId)
-
-        return getPackDrawable(packResources, pack, iconName)
-    }
-
-    /**
-     * Finds the drawable name mapped to a component in appfilter.xml.
-     */
-    private fun findMappedIcon(
-        context: Context,
-        resources: Resources,
-        pack: String,
-        component: ComponentName,
-    ): String? {
-        fun matchesComponent(value: String?): Boolean {
-            if (value == null) return false
-
-            val normalized =
-                value
-                    .removePrefix("ComponentInfo{")
-                    .removeSuffix("}")
-
-            val mapped =
-                ComponentName.unflattenFromString(normalized)
-                    ?: return false
-
-            return mapped.packageName == component.packageName &&
-                mapped.className == component.className
-        }
-
-        fun parseFilter(parser: XmlPullParser): String? {
-            var event = parser.eventType
-
-            while (event != XmlPullParser.END_DOCUMENT) {
-                if (event == XmlPullParser.START_TAG &&
-                    parser.name == "item"
-                ) {
-                    val target =
-                        parser.getAttributeValue(
-                            null,
-                            "component",
-                        )
-
-                    if (matchesComponent(target)) {
-                        return parser.getAttributeValue(
-                            null,
-                            "drawable",
-                        )
+                            val component = ComponentName.unflattenFromString(normalized)
+                            result.putIfAbsent(component ?: continue, drawableName ?: continue)
+                        }
+                        XmlPullParser.END_DOCUMENT -> return result
                     }
                 }
 
-                event = parser.next()
+                return result
             }
 
-            return null
-        }
-
-        // 1. Look in res/xml/appfilter.xml.
-        @SuppressLint("DiscouragedApi")
-        val xmlId =
-            resources.getIdentifier(
-                "appfilter",
-                "xml",
-                pack,
-            )
-
-        if (xmlId != 0) {
-            try {
-                resources.getXml(xmlId).use { parser ->
-                    parseFilter(parser)?.let { return it }
-                }
-            } catch (_: Exception) {
-                // Try assets.
-            }
-        }
-
-        // 2. Look in assets/appfilter.xml.
-        try {
-            val packContext =
-                context.createPackageContext(
+            // 1. Try res/xml/appfilter.xml.
+            @SuppressLint("DiscouragedAPI")
+            val xmlId =
+                resources.getIdentifier(
+                    "appfilter",
+                    "xml",
                     pack,
-                    Context.CONTEXT_IGNORE_SECURITY,
                 )
 
-            packContext.assets.open("appfilter.xml").use { stream ->
-                val parser = android.util.Xml.newPullParser()
-                parser.setInput(stream, null)
-                return parseFilter(parser)
+            if (xmlId != 0) {
+                return resources.getXml(xmlId).use { parser ->
+                    parse(parser)
+                }
             }
-        } catch (_: Exception) {
-            // No accessible mapping.
+
+            // 2. Fall back to assets/appfilter.xml.
+            return context
+                .createPackageContext(
+                    pack,
+                    Context.CONTEXT_IGNORE_SECURITY,
+                ).assets
+                .open("appfilter.xml")
+                .use { stream ->
+                    val parser = Xml.newPullParser()
+                    parser.setInput(stream, null)
+                    parse(parser)
+                }
         }
 
-        return null
-    }
-
-    /**
-     * Resolves a drawable name in drawable/ or mipmap/.
-     */
-    private fun getPackDrawable(
-        resources: Resources,
-        pack: String,
-        name: String,
-    ): Drawable? {
-        @SuppressLint("DiscouragedApi")
-        val drawableId =
-            resources.getIdentifier(
-                name,
-                "drawable",
-                pack,
-            )
-
-        val mipmapId =
-            if (drawableId == 0) {
-                @SuppressLint("DiscouragedApi")
-                resources.getIdentifier(name, "mipmap", pack)
-            } else {
-                0
+        fun icon(
+            context: Context,
+            intent: Intent,
+        ): Drawable? {
+            if (resources == null) {
+                return null
             }
+            val pm = context.packageManager
+            // Icon packs index by ComponentName (app)
+            // If not present try to find what app would open if this intent were launched
+            val component =
+                intent.component ?: pm
+                    .resolveActivity(
+                        intent,
+                        PackageManager.MATCH_DEFAULT_ONLY,
+                    )?.activityInfo
+                    ?.let {
+                        // Returning ComponentName from activityInfo may lead to incorrect values such as com.android.settings/com.android.settings.homepage.SettingsHomepageActivity
+                        // So find in this package, find the first launcher activity
+                        val launchIntent =
+                            Intent(Intent.ACTION_MAIN).apply {
+                                addCategory(Intent.CATEGORY_LAUNCHER)
+                                setPackage(it.packageName)
+                            }
 
-        val id = if (drawableId != 0) drawableId else mipmapId
+                        pm
+                            .queryIntentActivities(
+                                launchIntent,
+                                PackageManager.MATCH_DEFAULT_ONLY,
+                            ).firstOrNull()
+                            ?.activityInfo
+                            ?.let { activity ->
+                                ComponentName(activity.packageName, activity.name)
+                            }
+                    } ?: return null
 
-        return if (id != 0) {
-            resources.getDrawable(id, null)
-        } else {
-            null
+            // Use resolvedIcons or drawableNames
+            val id =
+                resolvedIcons[component] ?: drawableNames
+                    .remove(component)
+                    ?.let { drawableName ->
+                        @SuppressLint("DiscouragedAPI")
+                        resources.getIdentifier(drawableName, "drawable", pack).takeIf { it != 0 }
+                            ?: resources.getIdentifier(drawableName, "mipmap", pack).takeIf { it != 0 }
+                    }?.also {
+                        resolvedIcons[component] = it
+                    }
+
+            return resources.getDrawable(id ?: return null, null)
         }
     }
 }

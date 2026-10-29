@@ -11,6 +11,7 @@ import android.os.Looper
 import android.util.Log
 import java.util.concurrent.Executors
 import java.util.concurrent.RejectedExecutionException
+import kotlin.system.measureTimeMillis
 
 internal data class IntentKey(
     val component: ComponentName? = null,
@@ -63,10 +64,13 @@ object Icons {
         fun new(): Drawable = state.newDrawable(resources).mutate()
     }
 
+    private var iconPackQuery: IconPacks.IconPackQuery? = null
+
     private val cache = mutableMapOf<IntentKey, Entry>()
     private val loading = mutableSetOf<IntentKey>()
     private val waiting = mutableMapOf<IntentKey, MutableList<(Drawable?) -> Unit>>()
     private val failed = mutableSetOf<IntentKey>()
+    private var generation: Int = 0
 
     fun icon(
         context: Context,
@@ -96,6 +100,8 @@ object Icons {
      * that has just been updated going on showing the icon it had before.
      */
     fun clear() {
+        generation += 1
+        iconPackQuery = null
         cache.clear()
         failed.clear()
         loading.clear()
@@ -113,23 +119,32 @@ object Icons {
         // Only the resources, never the activity: this runs long after the call that
         // asked for the icon has gone.
         val resources = context.applicationContext.resources
-        val iconPack = LauncherConfig.iconPack(context)
         try {
+            val iconPack = LauncherConfig.iconPack(context)
+            val startGeneration = generation
             this.loader.execute {
+                // Update iconPackQuery
+                if (iconPack != null && iconPackQuery == null) {
+                    val time =
+                        measureTimeMillis {
+                            iconPackQuery = IconPacks.IconPackQuery(context, iconPack)
+                        }
+                    Log.d("Icons", "IconPackQuery took ${time / 1_000_000.0} ms")
+                }
                 val icon =
                     try {
                         val pm = context.applicationContext.packageManager
-                        if (iconPack == null) {
-                            pm.getActivityIcon(intent)
-                        } else {
-                            IconPacks.icon(context, iconPack, intent) ?: pm.getActivityIcon(intent)
-                        }
+                        iconPackQuery?.icon(context, intent) ?: pm.getActivityIcon(intent)
                     } catch (e: Exception) {
                         // A broken icon must not take the whole list down with it.
                         Log.w("Icons", "Could not load the icon for $intent", e)
                         null
                     }
-                main.post { deliver(intent, resources, icon) }
+                main.post {
+                    if (startGeneration == generation) {
+                        deliver(intent, resources, icon)
+                    }
+                }
             }
         } catch (e: RejectedExecutionException) {
             loading.remove(intent.key)
