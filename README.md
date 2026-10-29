@@ -22,6 +22,7 @@ nLauncher is a simple launcher based of its namesake, [mLauncher](https://github
 * Renaming apps
 * Add more widgets and add configuration for them
 * Theme based on wallpaper
+* Onboarding UI
 
 ## Developing
 
