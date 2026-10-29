@@ -23,6 +23,7 @@ import io.github.aurelia.nlauncher.AppCatalog
 import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
+import io.github.aurelia.nlauncher.PackageWatcher
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
@@ -65,6 +66,12 @@ class SearchScreen(
     private var adapter: Adapter? = null
     private var listView: ListView? = null
 
+    /** The package revision the list on screen was built at. */
+    private var renderedRevision = -1
+
+    /** Whether this screen is the one on the stack. */
+    private var active = false
+
     init {
         // The list is usually already resolved (the activity asks for it when it
         // starts); if it is not, build as soon as it arrives. Icons keep streaming
@@ -73,6 +80,13 @@ class SearchScreen(
             activity,
             onReady = { apps -> show(apps) },
         )
+
+        // This screen is reused for the life of the activity, so it has to hear
+        // about installs and uninstalls itself: nothing else re-resolves the list
+        // for it. While it is covered, the refresh is left to onActivated.
+        PackageWatcher.onPackagesChanged(activity) {
+            if (active) refreshIfStale()
+        }
 
         // Keep the search bar clear of the status bar and the results clear of the
         // navigation bar and the keyboard, both on the root. Reading the insets the
@@ -84,17 +98,36 @@ class SearchScreen(
 
     /** Draw the results, or explain that there is nothing to pick. */
     private fun show(apps: List<AppCatalog.AppEntry>) {
+        renderedRevision = PackageWatcher.revision
         if (apps.isEmpty()) {
             // Nothing to pick: say so, and leave this screen behind again as soon as
             // the stack has finished pushing it.
             Toast.makeText(activity, R.string.no_apps, Toast.LENGTH_SHORT).show()
-            view.post { activity.back() }
+            view.post { if (active) activity.back() }
         } else {
             build(apps)
         }
     }
 
+    /**
+     * Ask for the list again when the packages moved since it was last drawn.
+     *
+     * [AppCatalog] drops its cache when that happens, so this resolves in the
+     * background and [show] draws the result when it is ready.
+     */
+    private fun refreshIfStale() {
+        if (PackageWatcher.revision == renderedRevision) return
+        AppCatalog.apps(
+            activity,
+            onReady = { apps -> show(apps) },
+        )
+    }
+
     override fun onActivated() {
+        active = true
+        // A reused screen can have been built before an install or uninstall: look
+        // again now rather than showing a list that no longer matches the device.
+        refreshIfStale()
         // Every visit starts a fresh search. The input does not depend on the app
         // list, so it is set up even while a very fast first open is still waiting
         // for the list to arrive.
@@ -110,12 +143,23 @@ class SearchScreen(
     }
 
     override fun onDeactivated() {
+        active = false
         activity
             .getSystemService(InputMethodManager::class.java)
             ?.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
     private fun build(apps: List<AppCatalog.AppEntry>) {
+        val built = adapter
+        if (built != null) {
+            // The screen is reused: replace what the list holds instead of building
+            // it again, so the rows, the index and the typed query all survive a
+            // package change.
+            built.update(apps, searchInput.text.toString())
+            updateLetters()
+            highlightVisibleLetter()
+            return
+        }
         val rows =
             Adapter(
                 activity,
@@ -277,10 +321,20 @@ class SearchScreen(
 
     private class Adapter(
         private val activity: LauncherActivity,
-        private val all: List<AppCatalog.AppEntry>,
+        apps: List<AppCatalog.AppEntry>,
         private val onAppSettings: (AppCatalog.AppEntry) -> Unit,
     ) : BaseAdapter() {
+        private var all: List<AppCatalog.AppEntry> = apps
         private var shown: List<AppCatalog.AppEntry> = all
+
+        /** Replace the apps behind the current query, after a package change. */
+        fun update(
+            apps: List<AppCatalog.AppEntry>,
+            query: String,
+        ) {
+            all = apps
+            filter(query)
+        }
 
         /** Distinct index labels in the results: '#' first, then a-z. */
         fun letters(): List<Char> {
