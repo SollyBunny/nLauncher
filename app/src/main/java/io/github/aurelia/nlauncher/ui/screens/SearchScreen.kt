@@ -20,10 +20,11 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import io.github.aurelia.nlauncher.AppCatalog
+import io.github.aurelia.nlauncher.AppCatalogWatcher
+import io.github.aurelia.nlauncher.AppEntry
 import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
-import io.github.aurelia.nlauncher.PackageWatcher
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
 import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
@@ -66,26 +67,14 @@ class SearchScreen(
     private var adapter: Adapter? = null
     private var listView: ListView? = null
 
-    /** The package revision the list on screen was built at. */
     private var renderedRevision = -1
-
-    /** Whether this screen is the one on the stack. */
     private var active = false
+    private var catalog: AppCatalog? = null
 
     init {
-        // The list is usually already resolved (the activity asks for it when it
-        // starts); if it is not, build as soon as it arrives. Icons keep streaming
-        // in either way and refresh the rows once they have all landed.
-        AppCatalog.apps(
-            activity,
-            onReady = { apps -> show(apps) },
-        )
-
-        // This screen is reused for the life of the activity, so it has to hear
-        // about installs and uninstalls itself: nothing else re-resolves the list
-        // for it. While it is covered, the refresh is left to onActivated.
-        PackageWatcher.onPackagesChanged(activity) {
-            if (active) refreshIfStale()
+        AppCatalogWatcher.watchAppCatalog(activity) {
+            catalog = it
+            if (active) show()
         }
 
         // Keep the search bar clear of the status bar and the results clear of the
@@ -97,37 +86,24 @@ class SearchScreen(
     }
 
     /** Draw the results, or explain that there is nothing to pick. */
-    private fun show(apps: List<AppCatalog.AppEntry>) {
-        renderedRevision = PackageWatcher.revision
-        if (apps.isEmpty()) {
-            // Nothing to pick: say so, and leave this screen behind again as soon as
-            // the stack has finished pushing it.
-            Toast.makeText(activity, R.string.no_apps, Toast.LENGTH_SHORT).show()
-            view.post { if (active) activity.back() }
-        } else {
-            build(apps)
+    private fun show() {
+        catalog?.let { catalog ->
+            if (catalog.revision == renderedRevision) {
+                return
+            }
+            renderedRevision = catalog.revision
+            if (catalog.apps.isEmpty()) {
+                Toast.makeText(activity, R.string.no_apps, Toast.LENGTH_SHORT).show()
+                view.post { if (active) activity.back() }
+            } else {
+                build(catalog.apps)
+            }
         }
-    }
-
-    /**
-     * Ask for the list again when the packages moved since it was last drawn.
-     *
-     * [AppCatalog] drops its cache when that happens, so this resolves in the
-     * background and [show] draws the result when it is ready.
-     */
-    private fun refreshIfStale() {
-        if (PackageWatcher.revision == renderedRevision) return
-        AppCatalog.apps(
-            activity,
-            onReady = { apps -> show(apps) },
-        )
     }
 
     override fun onActivated() {
         active = true
-        // A reused screen can have been built before an install or uninstall: look
-        // again now rather than showing a list that no longer matches the device.
-        refreshIfStale()
+        show()
         // Every visit starts a fresh search. The input does not depend on the app
         // list, so it is set up even while a very fast first open is still waiting
         // for the list to arrive.
@@ -149,7 +125,7 @@ class SearchScreen(
             ?.hideSoftInputFromWindow(view.windowToken, 0)
     }
 
-    private fun build(apps: List<AppCatalog.AppEntry>) {
+    private fun build(apps: List<AppEntry>) {
         val built = adapter
         if (built != null) {
             // The screen is reused: replace what the list holds instead of building
@@ -283,7 +259,7 @@ class SearchScreen(
         val adapter = this.adapter ?: return
         val position = listView?.firstVisiblePosition ?: return
         if (position < 0 || position >= adapter.count) return
-        val letter = letterOf(adapter.getItem(position) as AppCatalog.AppEntry)
+        val letter = letterOf(adapter.getItem(position) as AppEntry)
         if (letter == highlighted) return
         highlighted = letter
         for ((cellLetter, cell) in letterCells) {
@@ -311,7 +287,7 @@ class SearchScreen(
      * Long-pressing a result opens that app's own settings page — the same "app
      * info" screen the system shows for a long press on a launcher icon.
      */
-    private fun showAppSettings(entry: AppCatalog.AppEntry) {
+    private fun showAppSettings(entry: AppEntry) {
         val packageName = entry.intent.component?.packageName ?: return
         activity.launch(
             Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS)
@@ -321,15 +297,15 @@ class SearchScreen(
 
     private class Adapter(
         private val activity: LauncherActivity,
-        apps: List<AppCatalog.AppEntry>,
-        private val onAppSettings: (AppCatalog.AppEntry) -> Unit,
+        apps: List<AppEntry>,
+        private val onAppSettings: (AppEntry) -> Unit,
     ) : BaseAdapter() {
-        private var all: List<AppCatalog.AppEntry> = apps
-        private var shown: List<AppCatalog.AppEntry> = all
+        private var all: List<AppEntry> = apps
+        private var shown: List<AppEntry> = all
 
         /** Replace the apps behind the current query, after a package change. */
         fun update(
-            apps: List<AppCatalog.AppEntry>,
+            apps: List<AppEntry>,
             query: String,
         ) {
             all = apps
@@ -442,4 +418,4 @@ private const val NON_LETTER = '#'
  *  symbols. Grouping those properly means sorting with a [java.text.Collator] and
  *  showing the locale's own letters in the bar.
  */
-private fun letterOf(entry: AppCatalog.AppEntry): Char = entry.searchLabel.firstOrNull()?.takeIf { it in 'a'..'z' } ?: NON_LETTER
+private fun letterOf(entry: AppEntry): Char = entry.searchLabel.firstOrNull()?.takeIf { it in 'a'..'z' } ?: NON_LETTER

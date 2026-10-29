@@ -7,8 +7,7 @@ import android.content.IntentFilter
 import android.os.Build
 
 /**
- * One receiver for the whole process, telling whoever caches package data that apps
- * were installed, removed or replaced and whatever was resolved has to go.
+ * Watches package changes (install, uninstall, modification)
  */
 object PackageWatcher {
     private val callbacks = mutableSetOf<() -> Unit>()

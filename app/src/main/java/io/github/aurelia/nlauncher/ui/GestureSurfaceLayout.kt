@@ -33,8 +33,7 @@ class GestureSurfaceLayout(
      */
     var onInterceptTouch: ((MotionEvent) -> Boolean)? = null
 
-    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean =
-        onInterceptTouch?.invoke(ev) == true || super.onInterceptTouchEvent(ev)
+    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean = onInterceptTouch?.invoke(ev) == true || super.onInterceptTouchEvent(ev)
 
     override fun performClick(): Boolean {
         super.performClick()

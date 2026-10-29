@@ -56,9 +56,7 @@ class LauncherActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Resolve the launchable apps straight away, off the main thread, while the
-        // UI inflates: the first time the search opens its list is already there.
-        AppCatalog.init(this)
+        AppCatalogWatcher.init(this)
         setContentView(R.layout.activity_launcher)
         host = findViewById(R.id.root)
 
