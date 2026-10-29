@@ -15,6 +15,7 @@ nLauncher is a simple launcher based of its namesake, [mLauncher](https://github
 * Consistent and minimal UI
 * Search screen opens instantly by loading apps eagerly
 * Intuitive and representative reordering UI for fav apps and widgets
+* A much cleaner codebase with less random features (some unused)
 
 ## TODO
 
