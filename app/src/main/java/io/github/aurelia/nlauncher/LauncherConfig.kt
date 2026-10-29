@@ -2,6 +2,9 @@ package io.github.aurelia.nlauncher
 
 import android.content.Context
 import android.content.Intent
+import android.provider.AlarmClock
+import android.provider.ContactsContract
+import android.provider.MediaStore
 import android.provider.Settings
 
 /** A press or swipe the user can bind an action to. */
@@ -78,7 +81,23 @@ object LauncherConfig {
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    private fun defaultFavorites() = listOf(FavoriteApp(Intent(Settings.ACTION_SETTINGS)))
+    private fun defaultFavorites() =
+        listOf(
+            FavoriteApp(Intent(AlarmClock.ACTION_SHOW_ALARMS)),
+            FavoriteApp(
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_APP_MESSAGING)
+                },
+            ),
+            FavoriteApp(
+                Intent(Intent.ACTION_VIEW).apply {
+                    type = ContactsContract.Contacts.CONTENT_TYPE
+                },
+            ),
+            FavoriteApp(Intent(Intent.ACTION_DIAL)),
+            FavoriteApp(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)),
+            FavoriteApp(Intent(Settings.ACTION_SETTINGS)),
+        )
 
     private fun defaultWidgets() = listOf(Widget.CLOCK, Widget.DATE)
 
