@@ -148,6 +148,9 @@ class HomeScreen(
         // Keep the favorites clear of the navigation bar, and the widgets below the
         // status bar with their own breathing room on top.
         view.padForSystemBars(topExtraDp = BAR_PADDING_DP)
+
+        // The search gesture (when bound to the app picker) opens the picked app.
+        activity.onSearchResult(KEY) { activity.launch(it) }
     }
 
     override fun onActivated() {
@@ -184,10 +187,6 @@ class HomeScreen(
     override fun onDestroyed() {
         // Native allocation, and the whole activity is on its way out with it.
         velocity.recycle()
-    }
-
-    override fun onSearchCompleted(intent: Intent) {
-        activity.launch(intent)
     }
 
     /** Rebuild the widget column from the stored order. */
@@ -266,7 +265,7 @@ class HomeScreen(
         when (val action = actions[gesture] ?: GestureAction.None) {
             is GestureAction.None -> Unit
             is GestureAction.OpenSettings -> activity.pushSettings()
-            is GestureAction.ShowAppSearch -> activity.pushSearch()
+            is GestureAction.ShowAppSearch -> activity.pushSearch(KEY)
             is GestureAction.OpenApp -> activity.launch(action.intent)
         }
     }

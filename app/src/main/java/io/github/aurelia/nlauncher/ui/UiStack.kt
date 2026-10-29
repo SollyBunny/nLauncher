@@ -1,6 +1,5 @@
 package io.github.aurelia.nlauncher.ui
 
-import android.content.Intent
 import android.os.Build
 import android.view.View
 import android.view.ViewGroup
@@ -35,11 +34,6 @@ interface Screen {
      * anything that outlives it (native resources, callbacks into a dying screen).
      */
     fun onDestroyed() {}
-
-    /**
-     * The search menu returned to this page
-     */
-    fun onSearchCompleted(intent: Intent) {}
 }
 
 /**

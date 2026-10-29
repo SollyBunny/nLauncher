@@ -1,7 +1,6 @@
 package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.AlertDialog
-import android.content.Intent
 import android.view.View
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -38,18 +37,18 @@ class GesturesScreen(
 
         val content: FrameLayout = view.findViewById(R.id.settings_content)
         content.addView(scrollableRows(activity, gesturesList))
+
+        // Every gesture's "Open app" result comes back under its own key, so a pick
+        // still lands on the right gesture after the activity is recreated.
+        for (gesture in Gesture.entries) {
+            activity.onSearchResult(resultKey(gesture)) { intent ->
+                applyGesture(gesture, GestureAction.OpenApp(intent))
+            }
+        }
     }
 
     override fun onActivated() {
         rebuildGestureRows()
-    }
-
-    var onSearchCompleted: ((Intent) -> Unit)? = null
-
-    override fun onSearchCompleted(intent: Intent) {
-        val callback = onSearchCompleted ?: return
-        onSearchCompleted = null
-        callback(intent)
     }
 
     private fun rebuildGestureRows() {
@@ -100,12 +99,7 @@ class GesturesScreen(
                 when (which) {
                     0 -> applyGesture(gesture, GestureAction.None)
                     1 -> applyGesture(gesture, GestureAction.OpenSettings)
-                    2 -> {
-                        this.onSearchCompleted = { intent ->
-                            applyGesture(gesture, GestureAction.OpenApp(intent))
-                        }
-                        activity.pushSearch()
-                    }
+                    2 -> activity.pushSearch(resultKey(gesture))
                     3 -> applyGesture(gesture, GestureAction.ShowAppSearch)
                 }
             }.setNegativeButton(android.R.string.cancel, null)
@@ -136,5 +130,8 @@ class GesturesScreen(
 
     companion object {
         const val KEY = "gestures"
+
+        /** The search-result key for binding [gesture] to a picked app. */
+        private fun resultKey(gesture: Gesture): String = "$KEY/${gesture.name}"
     }
 }

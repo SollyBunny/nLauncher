@@ -1,6 +1,5 @@
 package io.github.aurelia.nlauncher.ui.screens
 
-import android.content.Intent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -41,17 +40,18 @@ class EditFavoritesScreen(
         // Keep the rows clear of the navigation bar and the title bar below the
         // status bar (the bar's own padding comes from the layout).
         view.padForSystemBars()
+
+        // The "+ Add favorite" row opens the app picker; the pick becomes a favorite.
+        activity.onSearchResult(KEY) { intent ->
+            favorites.add(FavoriteApp(intent))
+            LauncherConfig.saveFavorites(activity, favorites)
+            populate()
+        }
     }
 
     override fun onActivated() {
         favorites.clear()
         favorites.addAll(LauncherConfig.favorites(activity))
-        populate()
-    }
-
-    override fun onSearchCompleted(intent: Intent) {
-        favorites.add(FavoriteApp(intent))
-        LauncherConfig.saveFavorites(activity, favorites)
         populate()
     }
 
@@ -74,7 +74,7 @@ class EditFavoritesScreen(
                 width = addIconSize
                 height = addIconSize
             }
-        add.setOnClickListener { activity.pushSearch() }
+        add.setOnClickListener { activity.pushSearch(KEY) }
         favoritesContainer.addView(add)
     }
 

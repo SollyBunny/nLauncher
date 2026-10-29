@@ -370,7 +370,7 @@ class SearchScreen(
             // The row itself is clickable (see item_app_choice.xml), so it consumes
             // the touch and ListView's onItemClick never fires; handle the pick here.
             view.setOnClickListener {
-                activity.backSearchCompleted(entry.intent)
+                activity.searchCompleted(entry.intent)
             }
             // Long-press goes to the app's settings page instead, and returning true
             // keeps it from counting as a pick as well.

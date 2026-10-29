@@ -54,6 +54,16 @@ class LauncherActivity : Activity() {
      */
     private var homeOnReturn = false
 
+    /** What each screen does with the app the search screen returns; see [onSearchResult]. */
+    private val searchResults = mutableMapOf<String, (Intent) -> Unit>()
+
+    /**
+     * The key whose callback the open search screen will hand its pick to. This is the
+     * only search state that has to outlive the activity: the callbacks themselves are
+     * registered again by the screens as they are rebuilt — see [onSearchResult].
+     */
+    private var searchResultKey: String? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppCatalogWatcher.init(this)
@@ -75,6 +85,9 @@ class LauncherActivity : Activity() {
             stack.push(home)
         } else {
             stack.restore(restored)
+            // Building the restored screens registered their search callbacks again;
+            // all that is left is which of them the open search screen belongs to.
+            searchResultKey = savedInstanceState?.getString(STATE_SEARCH_RESULT)
         }
     }
 
@@ -83,6 +96,7 @@ class LauncherActivity : Activity() {
         setIntent(intent)
         // The Home button re-delivers the HOME intent to this singleTask: whatever is
         // open (the editor, the settings, the search) is left for the home screen.
+        if (stack.top?.key == SearchScreen.KEY) searchResultKey = null
         stack.popToHome()
     }
 
@@ -110,6 +124,10 @@ class LauncherActivity : Activity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putStringArray(STATE_STACK, stack.keys().toTypedArray())
+        // Only the key is saved: the callbacks are rebuilt with their screens.
+        if (stack.top?.key == SearchScreen.KEY) {
+            outState.putString(STATE_SEARCH_RESULT, searchResultKey)
+        }
     }
 
     // ---- Navigation ------------------------------------------------------
@@ -124,16 +142,40 @@ class LauncherActivity : Activity() {
      * itself again, for a back press that was meant to do nothing.
      */
     fun back() {
+        // Backing out of the search without a pick abandons the request.
+        if (stack.top?.key == SearchScreen.KEY) searchResultKey = null
         stack.pop()
     }
 
-    fun backSearchCompleted(intent: Intent) {
-        stack.pop()
-        stack.top?.onSearchCompleted(intent)
-    }
-
-    fun pushSearch() {
+    /**
+     * Open the search screen; the app it returns goes to the callback registered for
+     * [key] through [onSearchResult].
+     */
+    fun pushSearch(key: String) {
+        searchResultKey = key
         stack.push(search)
+    }
+
+    /**
+     * Register what a screen does with an app picked in the search screen.
+     *
+     * The callback is looked up by [key] rather than held by the open screen, because
+     * only the key is saved when the activity is recreated: rebuilding the screen
+     * registers the callback again under the same key.
+     */
+    fun onSearchResult(
+        key: String,
+        callback: (Intent) -> Unit,
+    ) {
+        searchResults[key] = callback
+    }
+
+    /** The search screen picked [intent]: close it and hand the pick to its screen. */
+    fun searchCompleted(intent: Intent) {
+        val key = searchResultKey
+        searchResultKey = null
+        stack.pop()
+        if (key != null) searchResults[key]?.invoke(intent)
     }
 
     fun pushEditFavorites() {
@@ -208,5 +250,6 @@ class LauncherActivity : Activity() {
 
     private companion object {
         private const val STATE_STACK = "io.github.aurelia.nlauncher.extra.STACK"
+        private const val STATE_SEARCH_RESULT = "io.github.aurelia.nlauncher.extra.SEARCH_RESULT"
     }
 }
