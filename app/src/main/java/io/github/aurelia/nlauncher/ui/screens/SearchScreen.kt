@@ -22,6 +22,7 @@ import android.widget.Toast
 import io.github.aurelia.nlauncher.AppCatalog
 import io.github.aurelia.nlauncher.AppCatalogWatcher
 import io.github.aurelia.nlauncher.AppEntry
+import io.github.aurelia.nlauncher.AppUsage
 import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
@@ -68,8 +69,16 @@ class SearchScreen(
     private var listView: ListView? = null
 
     private var renderedRevision = -1
+    private var renderedUsage = false
     private var active = false
     private var catalog: AppCatalog? = null
+
+    /**
+     * Whether the results are ordered by how often they have been picked while the
+     * query is empty. The home screen's search gesture turns this on; every other
+     * caller wants the plain alphabetical picker.
+     */
+    var sortByUsage = false
 
     init {
         AppCatalogWatcher.watchAppCatalog(activity) {
@@ -88,10 +97,11 @@ class SearchScreen(
     /** Draw the results, or explain that there is nothing to pick. */
     private fun show() {
         catalog?.let { catalog ->
-            if (catalog.revision == renderedRevision) {
+            if (catalog.revision == renderedRevision && sortByUsage == renderedUsage) {
                 return
             }
             renderedRevision = catalog.revision
+            renderedUsage = sortByUsage
             if (catalog.apps.isEmpty()) {
                 Toast.makeText(activity, R.string.no_apps, Toast.LENGTH_SHORT).show()
                 view.post { if (active) activity.back() }
@@ -131,7 +141,7 @@ class SearchScreen(
             // The screen is reused: replace what the list holds instead of building
             // it again, so the rows, the index and the typed query all survive a
             // package change.
-            built.update(apps, searchInput.text.toString())
+            built.update(apps, searchInput.text.toString(), sortByUsage)
             updateLetters()
             highlightVisibleLetter()
             return
@@ -205,12 +215,11 @@ class SearchScreen(
 
         // A very fast open can beat the list in: the keyboard is already up and the
         // box may already hold a query, so apply what is typed rather than showing
-        // everything under it.
-        if (searchInput.text.isNotEmpty()) {
-            rows.filter(searchInput.text.toString())
-            updateLetters()
-            highlightVisibleLetter()
-        }
+        // everything under it. With no query this is also what puts the usage order
+        // in place the first time the screen is built.
+        rows.update(apps, searchInput.text.toString(), sortByUsage)
+        updateLetters()
+        highlightVisibleLetter()
     }
 
     /**
@@ -244,11 +253,16 @@ class SearchScreen(
 
     /** Show the letters the current results actually have, and hide the rest. */
     private fun updateLetters() {
+        // Jumping by letter makes no sense while the results are ordered by usage.
+        letterBar.visibility = if (usageOrdered()) View.GONE else View.VISIBLE
         val shown = adapter?.letters()?.toSet().orEmpty()
         for ((letter, cellView) in letterCells) {
             cellView.visibility = if (letter in shown) View.VISIBLE else View.GONE
         }
     }
+
+    /** Results ordered by how often they have been picked, or only when searching. */
+    private fun usageOrdered(): Boolean = sortByUsage && searchInput.text.isBlank()
 
     /**
      * Mark the letter of the topmost visible app as the current one: bold and in the
@@ -302,13 +316,16 @@ class SearchScreen(
     ) : BaseAdapter() {
         private var all: List<AppEntry> = apps
         private var shown: List<AppEntry> = all
+        private var sortByUsage = false
 
         /** Replace the apps behind the current query, after a package change. */
         fun update(
             apps: List<AppEntry>,
             query: String,
+            sortByUsage: Boolean,
         ) {
             all = apps
+            this.sortByUsage = sortByUsage
             filter(query)
         }
 
@@ -331,7 +348,20 @@ class SearchScreen(
 
         fun filter(query: String) {
             val q = query.trim().lowercase(Locale.ROOT)
-            shown = if (q.isEmpty()) all else all.filter { it.searchLabel.contains(q) }
+            shown =
+                when {
+                    q.isNotEmpty() -> all.filter { it.searchLabel.contains(q) }
+                    sortByUsage -> {
+                        // Most picked first; apps that were never picked stay in
+                        // alphabetical order at the end.
+                        val ranks = AppUsage.ranks(activity)
+                        all.sortedWith(
+                            compareBy<AppEntry> { ranks[it.key] ?: Int.MAX_VALUE }
+                                .thenBy { it.searchLabel },
+                        )
+                    }
+                    else -> all
+                }
             notifyDataSetChanged()
         }
 
@@ -370,6 +400,7 @@ class SearchScreen(
             // The row itself is clickable (see item_app_choice.xml), so it consumes
             // the touch and ListView's onItemClick never fires; handle the pick here.
             view.setOnClickListener {
+                AppUsage.record(activity, entry.key)
                 activity.searchCompleted(entry.intent)
             }
             // Long-press goes to the app's settings page instead, and returning true

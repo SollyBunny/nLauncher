@@ -84,6 +84,11 @@ class LauncherActivity : Activity() {
         if (restored.isNullOrEmpty()) {
             stack.push(home)
         } else {
+            // The search screen is built while the stack is restored, so its result
+            // ordering has to be back in place before it is activated.
+            if (restored.lastOrNull()?.key == SearchScreen.KEY) {
+                search.sortByUsage = savedInstanceState.getBoolean(STATE_SEARCH_SORT, false)
+            }
             stack.restore(restored)
             // Building the restored screens registered their search callbacks again;
             // all that is left is which of them the open search screen belongs to.
@@ -127,6 +132,7 @@ class LauncherActivity : Activity() {
         // Only the key is saved: the callbacks are rebuilt with their screens.
         if (stack.top?.key == SearchScreen.KEY) {
             outState.putString(STATE_SEARCH_RESULT, searchResultKey)
+            outState.putBoolean(STATE_SEARCH_SORT, search.sortByUsage)
         }
     }
 
@@ -149,10 +155,15 @@ class LauncherActivity : Activity() {
 
     /**
      * Open the search screen; the app it returns goes to the callback registered for
-     * [key] through [onSearchResult].
+     * [key] through [onSearchResult]. With [sortByUsage] the results are ordered by how
+     * often they were picked until the user starts typing a query.
      */
-    fun pushSearch(key: String) {
+    fun pushSearch(
+        key: String,
+        sortByUsage: Boolean = false,
+    ) {
         searchResultKey = key
+        search.sortByUsage = sortByUsage
         stack.push(search)
     }
 
@@ -251,5 +262,6 @@ class LauncherActivity : Activity() {
     private companion object {
         private const val STATE_STACK = "io.github.aurelia.nlauncher.extra.STACK"
         private const val STATE_SEARCH_RESULT = "io.github.aurelia.nlauncher.extra.SEARCH_RESULT"
+        private const val STATE_SEARCH_SORT = "io.github.aurelia.nlauncher.extra.SEARCH_SORT"
     }
 }

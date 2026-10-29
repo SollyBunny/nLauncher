@@ -265,7 +265,7 @@ class HomeScreen(
         when (val action = actions[gesture] ?: GestureAction.None) {
             is GestureAction.None -> Unit
             is GestureAction.OpenSettings -> activity.pushSettings()
-            is GestureAction.ShowAppSearch -> activity.pushSearch(KEY)
+            is GestureAction.ShowAppSearch -> activity.pushSearch(KEY, sortByUsage = true)
             is GestureAction.OpenApp -> activity.launch(action.intent)
         }
     }
