@@ -3,7 +3,9 @@ package io.github.aurelia.nlauncher.ui.screens
 import android.app.AlertDialog
 import android.view.View
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.SeekBar
 import android.widget.TextView
 import io.github.aurelia.nlauncher.IconPacks
 import io.github.aurelia.nlauncher.Icons
@@ -15,8 +17,8 @@ import java.util.Locale
 
 /**
  * "Look and feel": the settings that change what the launcher looks like rather than
- * what it does. Each row shows the current setting as well as its name, and opens the
- * dialog that changes it.
+ * what it does. Each row shows the current setting as well as its name; most open the
+ * dialog that changes it, while the sizes are sliders in the rows themselves.
  *
  * A submenu like the favorites and widgets editors, so it shares their header and gets
  * the back arrow rather than the launcher icon.
@@ -43,13 +45,29 @@ class LookAndFeelScreen(
 
     private fun rebuild() {
         rows.removeAllViews()
-        rows.addView(settingRow(R.string.text_size, sizeSummary(LauncherConfig.labelTextSp(activity))) { chooseTextSize() })
+        rows.addView(
+            sizeRow(
+                R.string.text_size,
+                TEXT_SIZE_MIN,
+                TEXT_SIZE_MAX,
+                TEXT_SIZE_STEP,
+                LauncherConfig.labelTextSp(activity),
+                LauncherConfig.DEFAULT_LABEL_TEXT_SP,
+            ) { LauncherConfig.saveLabelTextSp(activity, it) },
+        )
         rows.addView(settingRow(R.string.text_color, textColorSummary()) { chooseTextColor() })
-        rows.addView(settingRow(R.string.icon_size, sizeSummary(LauncherConfig.iconSizeSp(activity))) { chooseIconSize() })
+        rows.addView(
+            sizeRow(
+                R.string.icon_size,
+                ICON_SIZE_MIN,
+                ICON_SIZE_MAX,
+                ICON_SIZE_STEP,
+                LauncherConfig.iconSizeSp(activity),
+                LauncherConfig.DEFAULT_ICON_SIZE_SP,
+            ) { LauncherConfig.saveIconSizeSp(activity, it) },
+        )
         rows.addView(settingRow(R.string.icon_pack, iconPackSummary()) { chooseIconPack() })
     }
-
-    private fun sizeSummary(sp: Float): String = activity.getString(R.string.size_sp, sp.toInt())
 
     private fun textColorSummary(): String {
         val color = LauncherConfig.textColor(activity)
@@ -57,34 +75,60 @@ class LookAndFeelScreen(
         return if (index >= 0) activity.getString(TEXT_COLOR_NAMES[index]) else String.format(Locale.ROOT, "#%08X", color)
     }
 
-    private fun chooseTextSize() =
-        chooseSize(R.string.text_size, TEXT_SIZES_SP, LauncherConfig.labelTextSp(activity)) {
-            LauncherConfig.saveLabelTextSp(activity, it)
-        }
-
-    private fun chooseIconSize() =
-        chooseSize(R.string.icon_size, ICON_SIZES_SP, LauncherConfig.iconSizeSp(activity)) {
-            LauncherConfig.saveIconSizeSp(activity, it)
-        }
-
-    /** A radio list of sizes in sp, with the current one checked. */
-    private fun chooseSize(
+    /**
+     * A size setting: its name and current value on the left, a slider on the right
+     * that steps through [min]..[max] by [step], so every size the old radio lists
+     * offered is still reachable. Changes are saved as the slider moves, and a reset
+     * button appears once the value is no longer [default].
+     */
+    private fun sizeRow(
         titleRes: Int,
-        values: FloatArray,
+        min: Int,
+        max: Int,
+        step: Int,
         current: Float,
+        default: Float,
         save: (Float) -> Unit,
-    ) {
-        val labels = values.map { activity.getString(R.string.size_sp, it.toInt()) }.toTypedArray()
-        val selected = values.indexOfFirst { it == current }
-        AlertDialog
-            .Builder(activity)
-            .setTitle(titleRes)
-            .setSingleChoiceItems(labels, selected) { dialog, which ->
-                save(values[which])
-                rebuild()
-                dialog.dismiss()
-            }.setNegativeButton(android.R.string.cancel, null)
-            .show()
+    ): View {
+        val row = activity.layoutInflater.inflate(R.layout.item_size_setting, rows, false)
+        row.findViewById<TextView>(R.id.size_name).setText(titleRes)
+        val value = row.findViewById<TextView>(R.id.size_value)
+        val reset = row.findViewById<ImageView>(R.id.size_reset)
+        val stepCount = (max - min) / step
+        val seekBar =
+            row.findViewById<SeekBar>(R.id.size_slider).apply {
+                contentDescription = activity.getString(titleRes)
+                this.max = stepCount
+                progress = ((current.toInt() - min) / step).coerceIn(0, stepCount)
+            }
+
+        fun showValue(progress: Int) {
+            val sp = min + progress * step
+            value.text = activity.getString(R.string.size_sp, sp)
+            reset.visibility = if (sp.toFloat() == default) View.GONE else View.VISIBLE
+        }
+
+        showValue(seekBar.progress)
+        seekBar.setOnSeekBarChangeListener(
+            object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(
+                    seekBar: SeekBar?,
+                    progress: Int,
+                    fromUser: Boolean,
+                ) {
+                    showValue(progress)
+                    save((min + progress * step).toFloat())
+                }
+
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            },
+        )
+        reset.setOnClickListener {
+            seekBar.progress = ((default.toInt() - min) / step).coerceIn(0, stepCount)
+        }
+        return row
     }
 
     private fun chooseTextColor() {
@@ -190,9 +234,15 @@ class LookAndFeelScreen(
     companion object {
         const val KEY = "look_and_feel"
 
-        /** The sizes the dialogs offer, in sp. The defaults are among them. */
-        private val TEXT_SIZES_SP = floatArrayOf(12f, 14f, 16f, 18f, 20f, 22f, 24f, 28f, 32f)
-        private val ICON_SIZES_SP = floatArrayOf(24f, 32f, 40f, 48f, 56f, 64f, 72f, 80f, 96f)
+        /** The range the text size slider covers, in sp. */
+        private const val TEXT_SIZE_MIN = 12
+        private const val TEXT_SIZE_MAX = 32
+        private const val TEXT_SIZE_STEP = 2
+
+        /** The range the icon size slider covers, in sp. The default is among them. */
+        private const val ICON_SIZE_MIN = 24
+        private const val ICON_SIZE_MAX = 96
+        private const val ICON_SIZE_STEP = 8
 
         private val TEXT_COLOR_VALUES =
             intArrayOf(

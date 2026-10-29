@@ -18,6 +18,7 @@
     <string name="text_color">Text color</string>
     <string name="icon_size">Icon size</string>
     <string name="size_sp">%1$d sp</string>
+    <string name="reset_to_default">Reset to default</string>
 
     <string name="color_white">White</string>
     <string name="color_light_gray">Light gray</string>
