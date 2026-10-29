@@ -5,6 +5,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.accessibility.AccessibilityNodeInfo
 import io.github.aurelia.nlauncher.R
+import kotlin.math.abs
 
 /**
  * Drag a row by its handle to reorder it, shared by the favorites and the widgets
@@ -58,7 +59,7 @@ internal class DragToReorder(
                 return true
             }
             MotionEvent.ACTION_MOVE -> {
-                if (dragging) row.translationY = event.rawY - startRawY
+                if (dragging) dragTo(event.rawY - startRawY)
                 return true
             }
             MotionEvent.ACTION_UP -> {
@@ -86,23 +87,95 @@ internal class DragToReorder(
         return false
     }
 
-    /** Move the dragged row to whichever side of its neighbours its centre landed on. */
+    /**
+     * Follow the finger, but keep the row inside the list: it cannot be dragged above
+     * the first row or below the last. The rows it passes move out of its way, as if
+     * the list had already been reordered around it.
+     */
+    private fun dragTo(translation: Float) {
+        val from = indexOfRow()
+        if (from < 0 || from >= size()) {
+            row.translationY = translation
+            return
+        }
+        val clamped = clampTranslation(translation)
+        row.translationY = clamped
+        shiftRows(from, targetFor(from, clamped))
+    }
+
+    /** Keep the dragged row between the first and the last rows of the list. */
+    private fun clampTranslation(translation: Float): Float {
+        val first = childAt(0) ?: return translation
+        val last = childAt(size() - 1) ?: return translation
+        val top = (first.top - row.top).toFloat()
+        val bottom = (last.top + last.height - row.height - row.top).toFloat()
+        return if (top > bottom) 0f else translation.coerceIn(top, bottom)
+    }
+
+    /**
+     * The slot the row would occupy at [translation], by which slot it is closest to.
+     * Slots are where the row itself would be drawn after the move, not where the row
+     * currently below it is, which also works when the rows have different heights.
+     */
+    private fun targetFor(
+        from: Int,
+        translation: Float,
+    ): Int {
+        val top = row.top + translation
+        var target = from
+        var distance = Float.MAX_VALUE
+        for (i in 0 until size()) {
+            val slot = slotTop(from, i) ?: continue
+            val candidate = abs(top - slot)
+            if (candidate < distance) {
+                distance = candidate
+                target = i
+            }
+        }
+        return target
+    }
+
+    /** Where row [from] would be drawn if it ended up at index [to]. */
+    private fun slotTop(
+        from: Int,
+        to: Int,
+    ): Float? {
+        val other = childAt(to) ?: return null
+        // Moving down past the rows below: each one rises by the dragged row's
+        // height, so the row sits against that row's bottom. Moving up, it takes the
+        // place the row above had before that row was pushed down.
+        return when {
+            to > from -> (other.top + other.height - row.height).toFloat()
+            else -> other.top.toFloat()
+        }
+    }
+
+    /** Move every row the dragged one has passed to where it would be after the drop. */
+    private fun shiftRows(
+        from: Int,
+        to: Int,
+    ) {
+        val distance = row.height.toFloat()
+        for (i in 0 until size()) {
+            if (i == from) continue
+            val other = childAt(i) ?: continue
+            other.translationY =
+                when {
+                    i > from && i <= to -> -distance
+                    i >= to && i < from -> distance
+                    else -> 0f
+                }
+        }
+    }
+
+    /** Move the dragged row to the slot its centre landed on. */
     private fun drop() {
         val from = indexOfRow()
         if (from < 0 || from >= size()) {
             settle()
             return
         }
-
-        val center = row.top + row.translationY + row.height / 2f
-        var to = 0
-        for (i in 0 until size()) {
-            if (i == from) continue
-            // Skip anything unexpected rather than letting a missing child crash.
-            val other = childAt(i) ?: continue
-            if (center > other.top + other.height / 2f) to++
-        }
-
+        val to = targetFor(from, clampTranslation(row.translationY))
         if (to != from) onDrop(from, to)
         settle()
     }
@@ -111,6 +184,11 @@ internal class DragToReorder(
     private fun settle() {
         row.translationY = 0f
         row.elevation = 0f
+        // The list is rebuilt by [onChanged], but clear the rows that moved out of the
+        // way first: if the rebuild keeps any of them, they must not stay displaced.
+        for (i in 0 until size()) {
+            childAt(i)?.translationY = 0f
+        }
         onChanged()
     }
 
