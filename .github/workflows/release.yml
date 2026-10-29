@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Decode signing keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+
+      - name: Assemble signed release
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew :app:assembleRelease
+
+      - name: Collect APKs
+        shell: bash
+        run: |
+          mkdir -p apks
+
+          find app/build/outputs/apk/release \
+            -type f -name '*.apk' \
+            -exec cp {} apks/ \;
+
+          echo "Generated APKs:"
+          ls -lh apks/
+
+          test -n "$(find apks -type f -name '*.apk' -print -quit)"
+
+      - name: Upload APKs to GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          tag_name: latest
+          name: Latest Release
+          files: apks/*.apk
+          prerelease: true
+          make_latest: false

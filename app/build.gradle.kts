@@ -1,3 +1,4 @@
+
 plugins {
     id("com.android.application")
     id("org.jlleitschuh.gradle.ktlint")
@@ -15,9 +16,34 @@ android {
         versionName = "0.1"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile =
+                rootProject.file(
+                    System
+                        .getenv("ANDROID_KEYSTORE_PATH")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: "release.jks",
+                )
+            storePassword =
+                System
+                    .getenv("ANDROID_KEYSTORE_PASSWORD")
+                    ?.takeIf { it.isNotBlank() }
+            keyAlias = System
+                .getenv("ANDROID_KEY_ALIAS")
+                ?.takeIf { it.isNotBlank() }
+                ?: "release"
+            keyPassword = System
+                .getenv("ANDROID_KEY_PASSWORD")
+                ?.takeIf { it.isNotBlank() }
+                ?: storePassword
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -33,12 +59,7 @@ android {
     lint {
         abortOnError = true
         warningsAsErrors = false
-        // Every screen inflates its own root with a null parent on purpose: the
-        // UiStack attaches it and supplies the LayoutParams, and inflating with a
-        // parent here would apply the wrong ones.
         disable += "InflateParams"
-        // Rows paint a ripple over a background that is either transparent (the
-        // wallpaper shows through) or already covered by an opaque screen.
         disable += "Overdraw"
     }
 

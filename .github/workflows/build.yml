@@ -26,15 +26,15 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
-      - name: Assemble release
-        run: ./gradlew :app:assembleRelease
+      - name: Assemble debug
+        run: ./gradlew :app:assembleDebug
 
       - name: Collect APKs
         shell: bash
         run: |
           mkdir -p apks
 
-          find app/build/outputs/apk/release \
+          find app/build/outputs/apk/debug \
             -type f -name '*.apk' \
             -exec cp {} apks/ \;
 
