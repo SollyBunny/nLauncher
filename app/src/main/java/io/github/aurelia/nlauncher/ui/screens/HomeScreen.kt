@@ -80,6 +80,9 @@ class HomeScreen(
     /** Set once a gesture has fired, so one touch can only ever trigger one action. */
     private var gestureFired = false
 
+    /** Set once a drag that began on a child has been taken over as a gesture. */
+    private var gestureStartedOnChild = false
+
     private val clockHandler = Handler(Looper.getMainLooper())
     private var clockTicking = false
     private val clockTick =
@@ -119,20 +122,25 @@ class HomeScreen(
                 },
             )
 
-        // Only touches that no child (a favorite) consumed reach this screen, which is
-        // what keeps the gestures off the favorites themselves. A touch here is a
-        // gesture or a tap on the wallpaper, never a click on a view, so the surface
-        // itself answers performClick: that is what lets an accessibility service
-        // reach the wallpaper the same way a tap does.
+        // Touches that no child (a favorite or a widget) consumed reach this screen
+        // directly. A touch here is a gesture or a tap on the wallpaper, never a click
+        // on a view, so the surface itself answers performClick: that is what lets an
+        // accessibility service reach the wallpaper the same way a tap does.
         view.onSurfaceClick = { forwardTapToWallpaper(view.tapX, view.tapY) }
+        // A drag that starts on a favorite or a widget belongs to that view until it
+        // has moved far enough to be a gesture; see interceptChildDrag().
+        view.onInterceptTouch = { event -> interceptChildDrag(event) }
         view.setOnTouchListener { v, event ->
-            gestures.onTouchEvent(event)
+            // A drag taken off a child never sent its down here, so feeding the
+            // detector a stream that starts in the middle would be wrong.
+            if (!gestureStartedOnChild) gestures.onTouchEvent(event)
             trackSwipe(event)
             if (event.actionMasked == MotionEvent.ACTION_UP) {
                 view.tapX = event.x
                 view.tapY = event.y
-                // A swipe already claimed this touch; a tap is what is left.
-                if (!gestureFired) v.performClick()
+                // A swipe already claimed this touch; a tap on the surface is what is
+                // left. A drag taken off a child must not become a wallpaper tap.
+                if (!gestureFired && !gestureStartedOnChild) v.performClick()
             }
             true
         }
@@ -275,6 +283,41 @@ class HomeScreen(
         val alarm = Intent(AlarmClock.ACTION_SHOW_ALARMS)
         val clockPackage = pm.resolveActivity(alarm, 0)?.activityInfo?.packageName
         activity.launch(clockPackage?.let { pm.getLaunchIntentForPackage(it) } ?: alarm)
+    }
+
+    /**
+     * Take a drag off whichever child it started on.
+     *
+     * A favorite or a widget claims the touch on its own, so a swipe that began there
+     * never reached the surface and did nothing. Once the finger has moved further than
+     * the touch slop it is a drag rather than a tap, so the touch is claimed for the
+     * gesture: the child is cancelled and the rest of the touch arrives through the
+     * surface's own touch listener. A tap or a long press never moves that far, so it
+     * stays with the child — a favorite still opens its app, or its editor on a long
+     * press.
+     */
+    private fun interceptChildDrag(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                gestureStartedOnChild = false
+                // The surface will not see this down if a child claims it, so gesture
+                // tracking starts from here for both cases.
+                trackSwipe(event)
+            }
+            MotionEvent.ACTION_MOVE -> {
+                trackSwipe(event)
+                if (!gestureStartedOnChild &&
+                    maxOf(abs(event.x - touchStartX), abs(event.y - touchStartY)) > touchSlop
+                ) {
+                    gestureStartedOnChild = true
+                    return true
+                }
+            }
+            MotionEvent.ACTION_UP,
+            MotionEvent.ACTION_CANCEL,
+            -> velocity.clear()
+        }
+        return false
     }
 
     /**
