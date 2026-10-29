@@ -92,7 +92,7 @@ class LauncherActivity : Activity() {
             stack.restore(restored)
             // Building the restored screens registered their search callbacks again;
             // all that is left is which of them the open search screen belongs to.
-            searchResultKey = savedInstanceState?.getString(STATE_SEARCH_RESULT)
+            searchResultKey = savedInstanceState.getString(STATE_SEARCH_RESULT)
         }
     }
 
