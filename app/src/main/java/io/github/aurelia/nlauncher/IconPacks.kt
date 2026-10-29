@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.graphics.drawable.Drawable
+import android.util.Log
 import org.xmlpull.v1.XmlPullParser
 import java.util.Locale
 
@@ -59,7 +60,26 @@ object IconPacks {
         intent: Intent,
     ): Drawable? {
         val pm = context.packageManager
-        val component = intent.component ?: return null
+        // Icon packs index by ComponentName (app)
+        // If not present try to find what app would open if this intent were launched
+        val component = intent.component ?: pm.resolveActivity(
+            intent,
+            PackageManager.MATCH_DEFAULT_ONLY
+        )?.activityInfo?.let {
+            // Returning ComponentName from activityInfo may lead to incorrect values such as com.android.settings/com.android.settings.homepage.SettingsHomepageActivity
+            // So find in this package, find the first launcher activity
+            val launchIntent = Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_LAUNCHER)
+                setPackage(it.packageName)
+            }
+
+            pm.queryIntentActivities(
+                launchIntent,
+                PackageManager.MATCH_DEFAULT_ONLY
+            ).firstOrNull()?.activityInfo?.let { activity ->
+                ComponentName(activity.packageName, activity.name)
+            }
+        } ?: return null
 
         val packResources = pm.getResourcesForApplication(pack)
 
