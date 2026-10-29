@@ -1,0 +1,51 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Assemble release
+        run: ./gradlew :app:assembleRelease
+
+      - name: Collect APKs
+        shell: bash
+        run: |
+          mkdir -p apks
+
+          find app/build/outputs/apk/release \
+            -type f -name '*.apk' \
+            -exec cp {} apks/ \;
+
+          echo "Generated APKs:"
+          ls -lh apks/
+
+          test -n "$(find apks -type f -name '*.apk' -print -quit)"
+
+      - name: Upload all APKs
+        uses: actions/upload-artifact@v7
+        with:
+          name: apks
+          path: apks/*.apk
+          if-no-files-found: error
