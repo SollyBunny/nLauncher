@@ -30,7 +30,9 @@ nLauncher is a simple launcher based of its namesake, [mLauncher](https://github
 ```sh
 git clone --depth 1 https://github.com/SollyBunny/nLauncher && cd nLauncher
 ./gradlew :app:assembleDebug
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r app/build/outputs/apk/debug/*arm64-v8a*.apk
+# adb install -r app/build/outputs/apk/debug/*armeabi-v7a*.apk
+# adb install -r app/build/outputs/apk/debug/*x86_64*.apk
 ```
 
 Useful commands

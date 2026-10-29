@@ -73,6 +73,26 @@ android {
     }
 }
 
+androidComponents {
+    val version = android.defaultConfig.versionName
+    onVariants { variant ->
+        variant.outputs.forEach { output ->
+            val abi =
+                output.filters
+                    .find { it.filterType.toString() == "ABI" }
+                    ?.identifier
+                    ?: "universal"
+            output.outputFileName.set(
+                if (variant.name == "release") {
+                    "nLauncher-$version-$abi.apk"
+                } else {
+                    "nLauncher-$version-$abi-${variant.name}.apk"
+                },
+            )
+        }
+    }
+}
+
 kotlin {
     compilerOptions {
         jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
