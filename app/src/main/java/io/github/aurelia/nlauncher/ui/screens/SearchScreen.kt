@@ -13,7 +13,6 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.BaseAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.ScrollView
@@ -394,51 +393,62 @@ class SearchScreen(
             parent: ViewGroup,
         ): View {
             val view =
-                convertView
-                    ?: activity.layoutInflater.inflate(R.layout.item_app_choice, parent, false)
-            val entry = shown[position]
-            val icon = view.findViewById<ImageView>(R.id.app_choice_icon)
-            val label = view.findViewById<TextView>(R.id.app_choice_label)
-            // The row is recycled, so it has to say which app it is showing: an icon
-            // that arrives after the row has moved on to another app must not land on
-            // it. The same guard is what keeps this row honest while it scrolls.
-            icon.tag = entry.key
-            // Draw whatever is cached and let this row fill itself in when its own
-            // icon lands, rather than leaving every row blank until the last icon in
-            // the catalog has arrived.
-            icon.setImageDrawable(
-                Icons.icon(activity, entry.intent) { loaded ->
-                    if (icon.tag == entry.key) icon.setImageDrawable(loaded)
-                },
-            )
-            label.text = entry.label
-            label.textSize = LauncherConfig.labelTextSp(activity)
-            label.setTextColor(LauncherConfig.textColor(activity))
+                (convertView as? TextView)
+                    ?: activity.layoutInflater.inflate(
+                        R.layout.item_app_choice,
+                        parent,
+                        false,
+                    ) as TextView
 
-            // The row itself is clickable (see item_app_choice.xml), so it consumes
-            // the touch and ListView's onItemClick never fires; handle the pick here.
+            val entry = shown[position]
+
+            // Tag the row so a late icon load cannot update a recycled row.
+            view.tag = entry.key
+
+            view.text = entry.label
+            view.textSize = LauncherConfig.labelTextSp(activity)
+            view.setTextColor(LauncherConfig.textColor(activity))
+
+            // Configure the compound drawable.
+            val iconsShown = LauncherConfig.iconsShown(activity)
+            val size = LauncherConfig.iconSizeSp(activity).spToPx(activity)
+
+            if (iconsShown) {
+                // Empty icon
+                val placeholder =
+                    android.graphics.drawable.ColorDrawable(
+                        android.graphics.Color.TRANSPARENT,
+                    )
+
+                fun setIcon(drawable: android.graphics.drawable.Drawable?) {
+                    if (view.tag != entry.key) return
+                    view.setCompoundDrawablesRelative(
+                        null,
+                        null,
+                        (drawable ?: placeholder).apply { setBounds(0, 0, size, size) },
+                        null,
+                    )
+                }
+
+                setIcon(
+                    Icons.icon(activity, entry.intent) { loaded ->
+                        setIcon(loaded)
+                    },
+                )
+            } else {
+                view.setCompoundDrawablesRelative(null, null, null, null)
+            }
+
             view.setOnClickListener {
                 AppUsage.record(activity, entry.key)
                 activity.searchCompleted(entry.intent)
             }
-            // Long-press goes to the app's settings page instead, and returning true
-            // keeps it from counting as a pick as well.
+
             view.setOnLongClickListener {
                 onAppSettings(entry)
                 true
             }
 
-            // With icons turned off in Look and feel the row is just the label.
-            icon.visibility = if (LauncherConfig.iconsShown(activity)) View.VISIBLE else View.GONE
-
-            // Icons have a size of their own rather than following the label.
-            val size = LauncherConfig.iconSizeSp(activity).spToPx(activity)
-            val params = icon.layoutParams
-            if (params.width != size || params.height != size) {
-                params.width = size
-                params.height = size
-                icon.layoutParams = params
-            }
             return view
         }
     }

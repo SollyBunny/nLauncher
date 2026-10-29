@@ -1,10 +1,12 @@
 package io.github.aurelia.nlauncher.ui
 
 import android.content.Context
+import android.graphics.Color
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.ImageView
 import android.widget.TextView
 import io.github.aurelia.nlauncher.FavoriteApp
 import io.github.aurelia.nlauncher.Favorites
@@ -23,38 +25,44 @@ object FavoriteViews {
         favorite: FavoriteApp,
         context: Context,
     ): View {
-        val view = inflater.inflate(R.layout.item_favorite, parent, false)
-        val icon = view.findViewById<ImageView>(R.id.favorite_icon)
-        val label = view.findViewById<TextView>(R.id.favorite_label)
+        val view = inflater.inflate(R.layout.item_favorite, parent, false) as TextView
 
-        // Remember which app the row is for, so an icon that arrives late does not
-        // land on a row that has meanwhile been rebuilt for another one.
-        icon.tag = favorite.key
-        label.text = Favorites.label(context, favorite)
-        label.textSize = LauncherConfig.labelTextSp(context)
-        label.setTextColor(LauncherConfig.textColor(context))
+        // Remember which app the row is for, so a late icon cannot update a
+        // row that has since been rebuilt for another app.
+        view.tag = favorite.key
+        view.text = Favorites.label(context, favorite)
+        view.textSize = LauncherConfig.labelTextSp(context)
+        view.setTextColor(LauncherConfig.textColor(context))
 
-        // With icons turned off in Look and feel the row is just the label, so the
-        // icon view goes away rather than leaving an empty gap where it was.
-        icon.visibility = if (LauncherConfig.iconsShown(context)) View.VISIBLE else View.GONE
-
-        // The icon has a size of its own rather than following the label, so the two
-        // settings stay independent.
+        val iconsShown = LauncherConfig.iconsShown(context)
         val size = LauncherConfig.iconSizeSp(context).spToPx(context)
-        val params = icon.layoutParams
-        if (params.width != size || params.height != size) {
-            params.width = size
-            params.height = size
-            icon.layoutParams = params
+
+        // Keep the icon slot occupied even while the icon is unavailable.
+        val placeholder = ColorDrawable(Color.TRANSPARENT)
+
+        fun setIcon(drawable: Drawable?) {
+            if (view.tag != favorite.key) return
+
+            view.setCompoundDrawablesRelative(
+                (drawable ?: placeholder).apply {
+                    setBounds(0, 0, size, size)
+                },
+                null,
+                null,
+                null,
+            )
         }
 
-        // The icon may still be loading in the background: draw what there is now and
-        // let the callback fill the row in when it lands.
-        icon.setImageDrawable(
-            Icons.icon(context, favorite.intent) { loaded ->
-                if (icon.tag == favorite.key) icon.setImageDrawable(loaded)
-            },
-        )
+        if (iconsShown) {
+            setIcon(
+                Icons.icon(context, favorite.intent) { loaded ->
+                    setIcon(loaded)
+                },
+            )
+        } else {
+            view.setCompoundDrawablesRelative(null, null, null, null)
+        }
+
         return view
     }
 }

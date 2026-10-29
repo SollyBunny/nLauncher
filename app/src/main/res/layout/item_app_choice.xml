@@ -1,36 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    One app in the search picker. The row fills the list and hugs the right edge:
-    the label sits to the left of a right-aligned icon.
--->
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:clickable="true"
     android:focusable="true"
-    android:gravity="center_vertical|end"
-    android:orientation="horizontal"
-    android:padding="8dp">
-
-    <TextView
-        android:id="@+id/app_choice_label"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="12dp"
-        android:layout_weight="1"
-        android:ellipsize="end"
-        android:gravity="end"
-        android:maxLines="1"
-        android:shadowColor="#99000000"
-        android:shadowDx="1"
-        android:shadowDy="1"
-        android:shadowRadius="3"
-        android:textColor="@android:color/white" />
-
-    <ImageView
-        android:id="@+id/app_choice_icon"
-        android:layout_width="48dp"
-        android:layout_height="48dp"
-        android:importantForAccessibility="no" />
-
-</LinearLayout>
+    android:padding="4dp"
+    android:drawablePadding="12dp"
+    android:gravity="end|center_vertical"
+    android:ellipsize="end"
+    android:maxLines="1"
+    android:shadowColor="#99000000"
+    android:shadowDx="1"
+    android:shadowDy="1"
+    android:shadowRadius="3"
+    android:textColor="@android:color/white" />

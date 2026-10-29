@@ -1,5 +1,6 @@
 package io.github.aurelia.nlauncher
 
+import android.annotation.SuppressLint
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
@@ -151,6 +152,7 @@ object IconPacks {
         }
 
         // 1. Look in res/xml/appfilter.xml.
+        @SuppressLint("DiscouragedApi")
         val xmlId =
             resources.getIdentifier(
                 "appfilter",
@@ -196,6 +198,7 @@ object IconPacks {
         pack: String,
         name: String,
     ): Drawable? {
+        @SuppressLint("DiscouragedApi")
         val drawableId =
             resources.getIdentifier(
                 name,
@@ -205,6 +208,7 @@ object IconPacks {
 
         val mipmapId =
             if (drawableId == 0) {
+                @SuppressLint("DiscouragedApi")
                 resources.getIdentifier(name, "mipmap", pack)
             } else {
                 0
