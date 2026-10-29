@@ -54,6 +54,12 @@ jobs:
 
           test -n "$(find apks -type f -name '*.apk' -print -quit)"
 
+      - name: Delete previous latest release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+
       - name: Upload APKs to GitHub Release
         uses: softprops/action-gh-release@v3
         with:
