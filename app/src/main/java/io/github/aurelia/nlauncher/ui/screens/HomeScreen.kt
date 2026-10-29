@@ -1,10 +1,8 @@
 package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.WallpaperManager
-import android.content.Intent
 import android.os.Handler
 import android.os.Looper
-import android.provider.AlarmClock
 import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
@@ -196,9 +194,6 @@ class HomeScreen(
         val widgetGap = (WIDGET_GAP_DP * activity.resources.displayMetrics.density).toInt()
         for (widget in LauncherConfig.widgets(activity)) {
             val view = WidgetViews.create(activity, widget)
-            // Tapping a widget opens the clock app. The click is claimed by the
-            // widget, so it does not also reach the surface and land on the wallpaper.
-            view.setOnClickListener { openClock() }
             widgetsContainer.addView(
                 view,
                 LinearLayout
@@ -275,20 +270,6 @@ class HomeScreen(
             is GestureAction.ShowAppSearch -> activity.pushSearch(KEY, sortByUsage = true)
             is GestureAction.OpenApp -> activity.launch(action.intent)
         }
-    }
-
-    /**
-     * Open the clock app, the way tapping the clock in the status bar does.
-     *
-     * There is no public "show the clock" action, so the clock app is found through
-     * the alarm action — it is the app that answers it — and opened at its launcher
-     * activity; the alarm screen is the fallback for one without a launcher activity.
-     */
-    private fun openClock() {
-        val pm = activity.packageManager
-        val alarm = Intent(AlarmClock.ACTION_SHOW_ALARMS)
-        val clockPackage = pm.resolveActivity(alarm, 0)?.activityInfo?.packageName
-        activity.launch(clockPackage?.let { pm.getLaunchIntentForPackage(it) } ?: alarm)
     }
 
     /**

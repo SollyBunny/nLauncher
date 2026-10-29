@@ -40,9 +40,7 @@ sealed class GestureAction {
             when {
                 value == null -> None
                 value == "settings" -> OpenSettings
-                // "search_bar" was the old key for this action; still read it so stored
-                // bindings survive the rename.
-                value == "app_search" || value == "search_bar" -> ShowAppSearch
+                value == "app_search" -> ShowAppSearch
                 value.startsWith("app:") ->
                     runCatching {
                         OpenApp(Intent.parseUri(value.removePrefix("app:"), Intent.URI_INTENT_SCHEME))

@@ -20,7 +20,7 @@ nLauncher is a simple launcher based of its namesake, [mLauncher](https://github
 
 * Support for adding custom intents (PWAs)
 * Renaming apps
-* Rewrite tangled widget code, add more widgets and add configuration
+* Add more widgets and add configuration for them
 * Theme based on wallpaper
 
 ## Developing
