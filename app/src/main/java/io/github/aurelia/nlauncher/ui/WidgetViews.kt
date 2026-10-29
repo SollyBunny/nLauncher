@@ -5,6 +5,7 @@ import android.content.Context
 import android.graphics.Typeface
 import android.text.format.DateFormat
 import android.widget.TextView
+import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
 import java.util.Date
@@ -58,10 +59,13 @@ object WidgetViews {
         widget: Widget,
     ): TextView =
         TextView(context).apply {
+            // Widgets are multiples of the app label size, so one setting scales the
+            // whole screen while the clock stays much bigger than the date.
             textSize =
+                LauncherConfig.labelTextSp(context) *
                 when (widget) {
-                    Widget.CLOCK -> CLOCK_TEXT_SP
-                    Widget.DATE, Widget.ALARM -> DATE_TEXT_SP
+                    Widget.CLOCK -> CLOCK_TEXT_SCALE
+                    Widget.DATE, Widget.ALARM -> DATE_TEXT_SCALE
                 }
 
             typeface =
@@ -71,7 +75,7 @@ object WidgetViews {
                     Typeface.DEFAULT
                 }
 
-            setTextColor(context.getColor(R.color.text_primary))
+            setTextColor(LauncherConfig.textColor(context))
             setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
 
             if (widget == Widget.ALARM) {

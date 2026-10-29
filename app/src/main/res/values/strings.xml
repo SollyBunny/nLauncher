@@ -13,6 +13,25 @@
     <string name="menu_widgets">Widgets</string>
     <string name="menu_gestures">Gestures</string>
 
+    <!-- Look and feel -->
+    <string name="text_size">Text size</string>
+    <string name="text_color">Text color</string>
+    <string name="icon_size">Icon size</string>
+    <string name="size_sp">%1$d sp</string>
+
+    <string name="color_white">White</string>
+    <string name="color_light_gray">Light gray</string>
+    <string name="color_gray">Gray</string>
+    <string name="color_black">Black</string>
+    <string name="color_red">Red</string>
+    <string name="color_orange">Orange</string>
+    <string name="color_yellow">Yellow</string>
+    <string name="color_green">Green</string>
+    <string name="color_cyan">Cyan</string>
+    <string name="color_blue">Blue</string>
+    <string name="color_purple">Purple</string>
+    <string name="color_pink">Pink</string>
+
     <!-- Icon pack, under Look and feel -->
     <string name="icon_pack">Icon pack</string>
     <string name="icon_pack_custom_set">Custom (%1$s)</string>

@@ -10,13 +10,11 @@ import io.github.aurelia.nlauncher.FavoriteApp
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
-import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
 import io.github.aurelia.nlauncher.ui.DragToReorder
 import io.github.aurelia.nlauncher.ui.FavoriteViews
-import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
-import kotlin.math.roundToInt
+import io.github.aurelia.nlauncher.ui.spToPx
 
 /**
  * The favorites editor: its own screen, separate from [HomeScreen] rather than a mode
@@ -67,8 +65,8 @@ class EditFavoritesScreen(
         // Its + icon matches the favorites' icon size so the row lines up.
         val addLabel = add.findViewById<TextView>(R.id.add_app_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_app_icon)
-        addLabel.textSize = APP_LABEL_TEXT_SP
-        val addIconSize = (addLabel.textSize * ICON_TEXT_SCALE).roundToInt()
+        addLabel.textSize = LauncherConfig.labelTextSp(activity)
+        val addIconSize = LauncherConfig.iconSizeSp(activity).spToPx(activity)
         addIcon.layoutParams =
             addIcon.layoutParams.apply {
                 width = addIconSize

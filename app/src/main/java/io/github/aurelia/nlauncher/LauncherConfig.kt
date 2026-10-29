@@ -62,6 +62,15 @@ object LauncherConfig {
     private const val KEY_WIDGETS = "widgets"
     private const val KEY_ICON_PACK = "icon_pack"
     private const val KEY_ICONS_SHOWN = "icons_shown"
+    private const val KEY_LABEL_TEXT_SP = "label_text_sp"
+    private const val KEY_TEXT_COLOR = "text_color"
+    private const val KEY_ICON_SIZE_SP = "icon_size_sp"
+
+    /** The size app labels start at, in sp, before the user picks another. */
+    const val DEFAULT_LABEL_TEXT_SP = 18f
+
+    /** The size app icons start at, in sp, before the user picks another. */
+    const val DEFAULT_ICON_SIZE_SP = 40f
 
     // Parsing a stored favorite means an Intent.parseUri per entry, and the launcher
     // asks for them on every Home press, so the parsed list is kept against the exact
@@ -146,6 +155,39 @@ object LauncherConfig {
         shown: Boolean,
     ) {
         prefs(context).edit().putBoolean(KEY_ICONS_SHOWN, shown).apply()
+    }
+
+    /** How large app labels are, in sp. Widgets scale with the same setting. */
+    fun labelTextSp(context: Context): Float = prefs(context).getFloat(KEY_LABEL_TEXT_SP, DEFAULT_LABEL_TEXT_SP)
+
+    fun saveLabelTextSp(
+        context: Context,
+        sp: Float,
+    ) {
+        prefs(context).edit().putFloat(KEY_LABEL_TEXT_SP, sp).apply()
+    }
+
+    /**
+     * The color app labels and widget text are drawn in, or the theme's primary text
+     * color when the user has not picked one.
+     */
+    fun textColor(context: Context): Int = prefs(context).getInt(KEY_TEXT_COLOR, context.getColor(R.color.text_primary))
+
+    fun saveTextColor(
+        context: Context,
+        color: Int,
+    ) {
+        prefs(context).edit().putInt(KEY_TEXT_COLOR, color).apply()
+    }
+
+    /** How large app icons are, in sp. Unlike labels, icons do not scale on their own. */
+    fun iconSizeSp(context: Context): Float = prefs(context).getFloat(KEY_ICON_SIZE_SP, DEFAULT_ICON_SIZE_SP)
+
+    fun saveIconSizeSp(
+        context: Context,
+        sp: Float,
+    ) {
+        prefs(context).edit().putFloat(KEY_ICON_SIZE_SP, sp).apply()
     }
 
     fun gestureActions(context: Context): Map<Gesture, GestureAction> = Gesture.entries.associateWith { gestureAction(context, it) }

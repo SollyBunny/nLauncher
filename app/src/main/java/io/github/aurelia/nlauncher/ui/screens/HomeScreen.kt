@@ -63,7 +63,7 @@ class HomeScreen(
      */
     private var favorites: List<FavoriteApp> = emptyList()
     private var renderedRevision = -1
-    private var renderedIcons: String? = null
+    private var renderedAppearance: String? = null
     private var actions: Map<Gesture, GestureAction> = emptyMap()
 
     private val gestures: GestureDetector
@@ -228,23 +228,23 @@ class HomeScreen(
      * The package revision is part of the check because rows only ask [Icons] for
      * their icon as they are created: when a package changes, the icon cache is
      * dropped underneath them, and the column has to be built again to pick the new
-     * icons up. The icon setting is part of it for the same reason: a row only finds
-     * out whether it shows an icon as it is built, so changing the setting has to
-     * rebuild the column or the rows keep drawing what they were built with.
+     * icons up. The Look and feel settings are part of it for the same reason: a row
+     * only reads its size, color and icon setting as it is built, so changing one has
+     * to rebuild the column or the rows keep drawing what they were built with.
      */
     private fun populateFavorites() {
         val stored = LauncherConfig.favorites(activity)
         val revision = PackageWatcher.revision
-        val icons = iconSetting()
+        val appearance = appearanceSetting()
         if (revision == renderedRevision &&
-            icons == renderedIcons &&
+            appearance == renderedAppearance &&
             favorites.map { it.key } == stored.map { it.key }
         ) {
             return
         }
         favorites = stored
         renderedRevision = revision
-        renderedIcons = icons
+        renderedAppearance = appearance
 
         favoritesContainer.removeAllViews()
         for (favorite in favorites) {
@@ -258,8 +258,15 @@ class HomeScreen(
         }
     }
 
-    /** What the rows would be built with icon-wise, as one comparable value. */
-    private fun iconSetting(): String = "${LauncherConfig.iconsShown(activity)}/${LauncherConfig.iconPack(activity)}"
+    /** Everything the rows draw with, as one comparable value. */
+    private fun appearanceSetting(): String =
+        listOf(
+            LauncherConfig.iconsShown(activity),
+            LauncherConfig.iconPack(activity),
+            LauncherConfig.labelTextSp(activity),
+            LauncherConfig.iconSizeSp(activity),
+            LauncherConfig.textColor(activity),
+        ).joinToString("/")
 
     private fun trigger(gesture: Gesture) {
         when (val action = actions[gesture] ?: GestureAction.None) {

@@ -11,7 +11,6 @@ import io.github.aurelia.nlauncher.Favorites
 import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
-import kotlin.math.roundToInt
 
 /**
  * Builds a favorite row. The home screen and the editor's preview both go through
@@ -32,14 +31,16 @@ object FavoriteViews {
         // land on a row that has meanwhile been rebuilt for another one.
         icon.tag = favorite.key
         label.text = Favorites.label(context, favorite)
-        label.textSize = APP_LABEL_TEXT_SP
+        label.textSize = LauncherConfig.labelTextSp(context)
+        label.setTextColor(LauncherConfig.textColor(context))
 
         // With icons turned off in Look and feel the row is just the label, so the
         // icon view goes away rather than leaving an empty gap where it was.
         icon.visibility = if (LauncherConfig.iconsShown(context)) View.VISIBLE else View.GONE
 
-        // Icons sit at ICON_TEXT_SCALE times the label's text size.
-        val size = (label.textSize * ICON_TEXT_SCALE).roundToInt()
+        // The icon has a size of its own rather than following the label, so the two
+        // settings stay independent.
+        val size = LauncherConfig.iconSizeSp(context).spToPx(context)
         val params = icon.layoutParams
         if (params.width != size || params.height != size) {
             params.width = size

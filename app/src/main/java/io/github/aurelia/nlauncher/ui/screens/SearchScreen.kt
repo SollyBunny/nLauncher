@@ -27,10 +27,9 @@ import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
-import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
-import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import io.github.aurelia.nlauncher.ui.spToPx
 import java.util.Locale
 import kotlin.math.roundToInt
 
@@ -70,6 +69,8 @@ class SearchScreen(
 
     private var renderedRevision = -1
     private var renderedUsage = false
+    private var renderedLabelSp = -1f
+    private var renderedTextColor = 0
     private var active = false
     private var catalog: AppCatalog? = null
 
@@ -97,15 +98,27 @@ class SearchScreen(
     /** Draw the results, or explain that there is nothing to pick. */
     private fun show() {
         catalog?.let { catalog ->
-            if (catalog.revision == renderedRevision && sortByUsage == renderedUsage) {
+            val labelSp = LauncherConfig.labelTextSp(activity)
+            val textColor = LauncherConfig.textColor(activity)
+            if (catalog.revision == renderedRevision &&
+                sortByUsage == renderedUsage &&
+                labelSp == renderedLabelSp &&
+                textColor == renderedTextColor
+            ) {
                 return
             }
+            val labelsResized = labelSp != renderedLabelSp
             renderedRevision = catalog.revision
             renderedUsage = sortByUsage
+            renderedLabelSp = labelSp
+            renderedTextColor = textColor
             if (catalog.apps.isEmpty()) {
                 Toast.makeText(activity, R.string.no_apps, Toast.LENGTH_SHORT).show()
                 view.post { if (active) activity.back() }
             } else {
+                // The rows restyle themselves as they are drawn, but the index is built
+                // once, so a new label size has to build it again.
+                if (labelsResized && adapter != null) buildLetterBar()
                 build(catalog.apps)
             }
         }
@@ -233,11 +246,15 @@ class SearchScreen(
     private fun buildLetterBar() {
         letterBar.removeAllViews()
         letterCells.clear()
+        // The cells are rebuilt whenever the size changes, so none of them keeps the
+        // highlight from the previous build.
+        highlighted = null
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+        val labelSp = LauncherConfig.labelTextSp(activity)
         for (letter in ALL_LETTERS) {
             val cellView = TextView(activity)
             cellView.text = letter.uppercaseChar().toString()
-            cellView.textSize = APP_LABEL_TEXT_SP
+            cellView.textSize = labelSp
             cellView.gravity = Gravity.CENTER
             cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
             cellView.setOnClickListener { jumpTo(letter) }
@@ -395,7 +412,8 @@ class SearchScreen(
                 },
             )
             label.text = entry.label
-            label.textSize = APP_LABEL_TEXT_SP
+            label.textSize = LauncherConfig.labelTextSp(activity)
+            label.setTextColor(LauncherConfig.textColor(activity))
 
             // The row itself is clickable (see item_app_choice.xml), so it consumes
             // the touch and ListView's onItemClick never fires; handle the pick here.
@@ -413,8 +431,8 @@ class SearchScreen(
             // With icons turned off in Look and feel the row is just the label.
             icon.visibility = if (LauncherConfig.iconsShown(activity)) View.VISIBLE else View.GONE
 
-            // Icons sit at ICON_TEXT_SCALE times the label's text size.
-            val size = (label.textSize * ICON_TEXT_SCALE).roundToInt()
+            // Icons have a size of their own rather than following the label.
+            val size = LauncherConfig.iconSizeSp(activity).spToPx(activity)
             val params = icon.layoutParams
             if (params.width != size || params.height != size) {
                 params.width = size

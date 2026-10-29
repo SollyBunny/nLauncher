@@ -11,14 +11,12 @@ import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
-import io.github.aurelia.nlauncher.ui.APP_LABEL_TEXT_SP
 import io.github.aurelia.nlauncher.ui.BAR_PADDING_DP
 import io.github.aurelia.nlauncher.ui.DragToReorder
-import io.github.aurelia.nlauncher.ui.ICON_TEXT_SCALE
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.padForSystemBars
-import kotlin.math.roundToInt
+import io.github.aurelia.nlauncher.ui.spToPx
 
 /**
  * The widgets editor, the sibling of [EditFavoritesScreen]. Each widget gets a drag
@@ -69,8 +67,8 @@ class EditWidgetsScreen(
         // Its + icon matches the widgets' handle size so the row lines up.
         val addLabel = add.findViewById<TextView>(R.id.add_widget_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_widget_icon)
-        addLabel.textSize = APP_LABEL_TEXT_SP
-        val addIconSize = (addLabel.textSize * ICON_TEXT_SCALE).roundToInt()
+        addLabel.textSize = LauncherConfig.labelTextSp(activity)
+        val addIconSize = LauncherConfig.iconSizeSp(activity).spToPx(activity)
         addIcon.layoutParams =
             addIcon.layoutParams.apply {
                 width = addIconSize
