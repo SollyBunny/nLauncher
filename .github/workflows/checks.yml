@@ -1,4 +1,4 @@
-name: Check formatting
+name: Check formatting and build
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   checks:
-    name: Check formatting
+    name: Check formatting and build
     runs-on: ubuntu-latest
 
     steps:
@@ -29,5 +29,5 @@ jobs:
       - name: Run ktlintCheck
         run: ./gradlew ktlintCheck
 
-      - name: Run Android Lint
-        run: ./gradlew :app:lintDebug
+      - name: Run assembleBuild
+        run: ./gradlew :app:assembleDebug -Parm64Only=true

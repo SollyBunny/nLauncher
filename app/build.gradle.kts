@@ -1,4 +1,3 @@
-
 plugins {
     id("com.android.application")
     id("org.jlleitschuh.gradle.ktlint")
@@ -67,8 +66,16 @@ android {
         abi {
             isEnable = true
             reset()
-            include("arm64-v8a", "armeabi-v7a", "x86_64")
-            isUniversalApk = true
+            val arm64Only = providers.gradleProperty("arm64Only")
+                .map { it.toBoolean() }
+                .getOrElse(false)
+            if (arm64Only) {
+                include("arm64-v8a")
+                isUniversalApk = false
+            } else {
+                include("arm64-v8a", "armeabi-v7a", "x86_64")
+                isUniversalApk = true
+            }
         }
     }
 }
