@@ -25,7 +25,7 @@ data class AppCatalog(
 )
 
 /**
- * Keeps up to date catalog of launchable apps
+ * Keeps up-to-date catalog of launchable apps
  */
 object AppCatalogWatcher {
     /** The package query never races itself: one background thread does all of it. */
@@ -48,7 +48,6 @@ object AppCatalogWatcher {
     }
 
     fun watchAppCatalog(
-        context: Context,
         callback: (AppCatalog?) -> Unit,
     ) {
         callbacks += callback

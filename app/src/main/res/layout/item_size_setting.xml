@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    A setting whose value is a slider rather than a dialog: the name and its current
-    value on the left, the slider filling the rest of the row, and a reset button that
-    only shows once the value has moved away from its default.
+    A setting whose value is a slider: the name and its current
+    value on the left, the slider fills in the middle, and a reset button
+    on the right that only shows once the value has moved away from its default.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"

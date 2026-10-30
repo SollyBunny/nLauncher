@@ -18,13 +18,6 @@ import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.padForSystemBars
 import io.github.aurelia.nlauncher.ui.spToPx
 
-/**
- * The widgets editor, the sibling of [EditFavoritesScreen]. Each widget gets a drag
- * handle and a delete button around the exact view the home screen shows, the
- * "+ Add widget" row sits above them, and the title with "Done" runs along the
- * *bottom* — the widgets live at the top of the screen, so a top bar would cover
- * them. "Done" pops back to whatever screen the user came from.
- */
 class EditWidgetsScreen(
     private val activity: LauncherActivity,
 ) : Screen {

@@ -13,13 +13,7 @@ object PackageWatcher {
     private val callbacks = mutableSetOf<() -> Unit>()
     private var receiver: BroadcastReceiver? = null
 
-    /**
-     * Bumped whenever a package is installed, removed or replaced.
-     *
-     * Anything rendering package-derived data can remember what it last drew at this
-     * value and redraw when it moves, instead of having to register a listener of its
-     * own just to find out that what it is showing has gone stale.
-     */
+    // Bumped whenever a package is installed, removed or replaced.
     var revision: Int = 0
         private set
 

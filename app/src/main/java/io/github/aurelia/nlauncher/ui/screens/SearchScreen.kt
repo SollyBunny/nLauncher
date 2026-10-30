@@ -32,19 +32,6 @@ import io.github.aurelia.nlauncher.ui.spToPx
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/**
- * The "pick an app" screen. The gesture bindings, the favorites editor and the home
- * screen's search gesture all push it, so there is exactly one implementation.
- *
- * The search bar sits on top and is auto-focused, and the results fill the width next
- * to the A-Z index, filtered as you type. Tapping a result picks it; long-pressing
- * one opens that app's own settings page. Like the rest of the launcher it paints
- * nothing of its own, so the live wallpaper stays visible (and interactive) behind it.
- *
- * The screen makes room for the keyboard itself (the window will not), and the index
- * is one scrollable column, so neither the results nor the far end of the alphabet is
- * left behind it.
- */
 class SearchScreen(
     private val activity: LauncherActivity,
 ) : Screen {
@@ -81,7 +68,7 @@ class SearchScreen(
     var sortByUsage = false
 
     init {
-        AppCatalogWatcher.watchAppCatalog(activity) {
+        AppCatalogWatcher.watchAppCatalog {
             catalog = it
             if (active) show()
         }

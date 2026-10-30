@@ -14,13 +14,6 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
 
-/**
- * The gesture bindings, one row per gesture showing the action bound to it. Binding
- * "Open app" pushes the app search on top of this screen.
- *
- * Shares [R.layout.screen_settings] with [SettingsScreen]: same header, different
- * content panel and title.
- */
 class GesturesScreen(
     private val activity: LauncherActivity,
 ) : Screen {

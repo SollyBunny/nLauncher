@@ -15,14 +15,6 @@ import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
 import java.util.Locale
 
-/**
- * "Look and feel": the settings that change what the launcher looks like rather than
- * what it does. Each row shows the current setting as well as its name; most open the
- * dialog that changes it, while the sizes are sliders in the rows themselves.
- *
- * A submenu like the favorites and widgets editors, so it shares their header and gets
- * the back arrow rather than the launcher icon.
- */
 class LookAndFeelScreen(
     private val activity: LauncherActivity,
 ) : Screen {

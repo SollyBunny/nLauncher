@@ -12,14 +12,6 @@ import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
 
-/**
- * The settings menu, a screen on the launcher's stack rather than an activity of its
- * own. It is opaque (it paints its own background over the wallpaper) and leads to the
- * two other settings screens: the favorites editor and the gesture bindings.
- *
- * Shares [R.layout.screen_settings] with [GesturesScreen]: same header, different
- * content panel and title.
- */
 class SettingsScreen(
     private val activity: LauncherActivity,
 ) : Screen {
@@ -71,15 +63,6 @@ internal fun scrollableRows(
         )
     }
 
-/**
- * The header every screen sharing [R.layout.screen_settings] wears: its title, and
- * the way out of it.
- *
- * The two 40dp slots on the left hold one icon at a time — the launcher icon on the
- * screen you enter the settings at, the back arrow on every screen below it, which is
- * what a submenu of the settings should offer. They are the same size and padding, so
- * the title does not move between them.
- */
 internal fun setHeader(
     activity: LauncherActivity,
     view: View,

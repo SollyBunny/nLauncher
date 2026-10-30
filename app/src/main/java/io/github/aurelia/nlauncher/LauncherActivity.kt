@@ -21,7 +21,7 @@ import io.github.aurelia.nlauncher.ui.screens.SearchScreen
 import io.github.aurelia.nlauncher.ui.screens.SettingsScreen
 
 /**
- * The launcher, and the only activity it has.
+ * The launcher and the only activity it has.
  *
  * Every screen lives on a [UiStack]: the home screen at the bottom, everything else
  * pushed on top of it and popped off again. Only the top screen is attached to the
@@ -48,9 +48,7 @@ class LauncherActivity : Activity() {
     private val search by lazy { SearchScreen(this) }
 
     /**
-     * Set when a screen the user left open on purpose launched an app, so the resume
-     * that follows going back to that app lands on the home screen. Cleared by the
-     * resume itself, whatever the stack looks like by then.
+     * Set when a screen launched an app. After resume, if this is enabled, return to home.
      */
     private var homeOnReturn = false
 
@@ -138,15 +136,6 @@ class LauncherActivity : Activity() {
 
     // ---- Navigation ------------------------------------------------------
 
-    /**
-     * Close the screen on top.
-     *
-     * With only the home screen left there is nothing to close and nothing behind it,
-     * so back is swallowed rather than finishing the launcher. Finishing the home
-     * activity leaves the task empty, and the system answers that by starting the home
-     * app again as a fresh activity — so the home screen tears itself down and builds
-     * itself again, for a back press that was meant to do nothing.
-     */
     fun back() {
         // Backing out of the search without a pick abandons the request.
         if (stack.top?.key == SearchScreen.KEY) searchResultKey = null
@@ -212,9 +201,9 @@ class LauncherActivity : Activity() {
     fun launch(intent: Intent) {
         try {
             startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
+        } catch (_: ActivityNotFoundException) {
             Toast.makeText(this, getString(R.string.launch_activity_not_found_exception, intent), Toast.LENGTH_SHORT).show()
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             Toast.makeText(this, getString(R.string.launch_security_exception, intent), Toast.LENGTH_SHORT).show()
         }
     }

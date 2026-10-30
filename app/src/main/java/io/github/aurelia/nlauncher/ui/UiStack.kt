@@ -5,11 +5,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowInsets
 
-/**
- * One full-screen UI of the launcher. Every screen owns its own layout and lives in
- * [io.github.aurelia.nlauncher.LauncherActivity]'s window; the [UiStack] keeps exactly one of them on screen, so
- * no two screens can ever render at the same time.
- */
 interface Screen {
     /** Stable identifier, used to restore the stack when the activity is recreated. */
     val key: String
@@ -173,7 +168,7 @@ fun View.padForSystemBars(
     val end = paddingEnd
     val top = paddingTop
     val bottom = paddingBottom
-    val topExtra = (topExtraDp * resources.displayMetrics.density).toInt()
+    val topExtra = topExtraDp.dpToPx(context)
 
     setOnApplyWindowInsetsListener { view, insets ->
         val status: Int

@@ -26,18 +26,11 @@ import io.github.aurelia.nlauncher.ui.SWIPE_MIN_DP
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.WIDGET_GAP_DP
 import io.github.aurelia.nlauncher.ui.WidgetViews
+import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.padForSystemBars
 import java.util.Date
 import kotlin.math.abs
 
-/**
- * The home screen: the widgets (clock, date, ...) at the top, the favorites in the
- * bottom-left corner and the wallpaper behind them.
- *
- * Gestures live here and nowhere else, so they go quiet as soon as any other screen
- * is pushed on top of it — no "edit mode" check needed, since this screen is simply
- * not on screen while the editor is.
- */
 class HomeScreen(
     private val activity: LauncherActivity,
 ) : Screen {
@@ -66,7 +59,7 @@ class HomeScreen(
 
     private val gestures: GestureDetector
 
-    private val swipeMinDistance: Float by lazy { SWIPE_MIN_DP * activity.resources.displayMetrics.density }
+    private val swipeMinDistance: Float by lazy { SWIPE_MIN_DP.dpToPx(view.context).toFloat() }
     private val minFlingVelocity: Float by lazy { ViewConfiguration.get(activity).scaledMinimumFlingVelocity.toFloat() }
     private val touchSlop: Float by lazy { ViewConfiguration.get(activity).scaledTouchSlop.toFloat() }
 
@@ -187,11 +180,10 @@ class HomeScreen(
         velocity.recycle()
     }
 
-    /** Rebuild the widget column from the stored order. */
     private fun populateWidgets() {
         widgetsContainer.removeAllViews()
         widgetViews.clear()
-        val widgetGap = (WIDGET_GAP_DP * activity.resources.displayMetrics.density).toInt()
+        val widgetGap = WIDGET_GAP_DP.dpToPx(view.context)
         for (widget in LauncherConfig.widgets(activity)) {
             val view = WidgetViews.create(activity, widget)
             widgetsContainer.addView(
@@ -208,25 +200,11 @@ class HomeScreen(
         }
     }
 
-    /** Refresh every widget on screen; each one formats its own text. */
     private fun updateWidgets() {
         val now = Date()
         for ((widget, view) in widgetViews) view.text = WidgetViews.text(activity, widget, now)
     }
 
-    /**
-     * Rebuild the favorites column, but only when what is on screen no longer matches
-     * what is stored. A launcher redraws this screen on every Home press, and
-     * inflating a row per favorite every time is the most expensive thing it does —
-     * for a list that almost never changes between two presses.
-     *
-     * The package revision is part of the check because rows only ask [Icons] for
-     * their icon as they are created: when a package changes, the icon cache is
-     * dropped underneath them, and the column has to be built again to pick the new
-     * icons up. The Look and feel settings are part of it for the same reason: a row
-     * only reads its size, color and icon setting as it is built, so changing one has
-     * to rebuild the column or the rows keep drawing what they were built with.
-     */
     private fun populateFavorites() {
         val stored = LauncherConfig.favorites(activity)
         val revision = PackageWatcher.revision
@@ -278,7 +256,7 @@ class HomeScreen(
      * A favorite or a widget claims the touch on its own, so a swipe that began there
      * never reached the surface and did nothing. Once the finger has moved further than
      * the touch slop it is a drag rather than a tap, so the touch is claimed for the
-     * gesture: the child is cancelled and the rest of the touch arrives through the
+     * gesture: the child is canceled and the rest of the touch arrives through the
      * surface's own touch listener. A tap or a long press never moves that far, so it
      * stays with the child — a favorite still opens its app, or its editor on a long
      * press.
@@ -309,7 +287,7 @@ class HomeScreen(
 
     /**
      * Works out a swipe from where the finger ended up, rather than from how fast it
-     * was moving when it was let go. A swipe counts once it has travelled far enough,
+     * was moving when it was let go. A swipe counts once it has traveled far enough,
      * however slowly it was made and whatever the finger did in between: pausing
      * halfway, or hanging on at the end for a few seconds, no longer turns a swipe
      * into a hold (the [GestureDetector] drops the long press as soon as the finger

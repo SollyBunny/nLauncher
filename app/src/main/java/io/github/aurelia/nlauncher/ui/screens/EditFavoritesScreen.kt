@@ -16,12 +16,6 @@ import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
 import io.github.aurelia.nlauncher.ui.spToPx
 
-/**
- * The favorites editor: its own screen, separate from [HomeScreen] rather than a mode
- * of it. Each favorite gets a drag handle and a delete button around the exact row the
- * home screen shows, the "+ Add favorite" row stays pinned at the top, and "Done"
- * pops back to whatever screen the user came from.
- */
 class EditFavoritesScreen(
     private val activity: LauncherActivity,
 ) : Screen {

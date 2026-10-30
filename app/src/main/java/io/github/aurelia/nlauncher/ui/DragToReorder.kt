@@ -18,7 +18,7 @@ import kotlin.math.abs
  * impossible without sight of the screen.
  *
  * @param size how many rows there are.
- * @param childAt the view showing row [index], or null for one that is not in the list
+ * @param childAt the view showing row index, or null for one that is not in the list
  *   at all — the editors' "+ Add" row, which is not reorderable.
  * @param indexOfRow where this row currently sits, or anything out of range if it is
  *   not a row of this list.
@@ -54,7 +54,7 @@ internal class DragToReorder(
             MotionEvent.ACTION_DOWN -> {
                 dragging = true
                 startRawY = event.rawY
-                row.elevation = dp(8f).toFloat()
+                row.elevation = 8f.dpToPx(v.context).toFloat()
                 row.parent?.requestDisallowInterceptTouchEvent(true)
                 return true
             }
@@ -77,7 +77,7 @@ internal class DragToReorder(
                 if (dragging) {
                     dragging = false
                     row.parent?.requestDisallowInterceptTouchEvent(false)
-                    // Cancelled: the row never really moved, so nothing is reordered —
+                    // Canceled: the row never really moved, so nothing is reordered —
                     // just put it back where it was drawn.
                     settle()
                 }
@@ -160,15 +160,15 @@ internal class DragToReorder(
             if (i == from) continue
             val other = childAt(i) ?: continue
             other.translationY =
-                when {
-                    i > from && i <= to -> -distance
-                    i >= to && i < from -> distance
+                when (i) {
+                    in (from + 1)..to -> -distance
+                    in to..<from -> distance
                     else -> 0f
                 }
         }
     }
 
-    /** Move the dragged row to the slot its centre landed on. */
+    /** Move the dragged row to the slot its center landed on. */
     private fun drop() {
         val from = indexOfRow()
         if (from < 0 || from >= size()) {
@@ -215,7 +215,7 @@ internal class DragToReorder(
             ) {
                 super.onInitializeAccessibilityNodeInfo(host, info)
                 // The scroll actions are what an accessibility service drives to move
-                // through a list, relabelled here to say what they do to this row.
+                // through a list, relabeled here to say what they do to this row.
                 // There is no AndroidX in this app, so the dedicated move actions
                 // AccessibilityNodeInfoCompat adds are not available.
                 if (canMove(UP)) {
@@ -248,8 +248,6 @@ internal class DragToReorder(
         val to = from + delta
         return from >= 0 && from < size() && to >= 0 && to < size()
     }
-
-    private fun dp(value: Float): Int = (value * row.resources.displayMetrics.density).toInt()
 
     private companion object {
         /** Which way through the list a move goes; -1 is towards the top. */

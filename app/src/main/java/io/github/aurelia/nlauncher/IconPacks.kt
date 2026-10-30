@@ -13,12 +13,6 @@ import org.xmlpull.v1.XmlPullParser
 import java.util.Locale
 
 object IconPacks {
-    /**
-     * How an icon pack announces itself. There is more than one spelling in the wild —
-     * the framework's own [PackageManager] only ever defines one of them — so all of
-     * them are asked and the results merged rather than betting on a single filter and
-     * showing an empty list on a device that uses a different one.
-     */
     private val PACK_FILTERS =
         listOf(
             Intent("org.adw.launcher.THEMES"),
@@ -68,7 +62,7 @@ object IconPacks {
             var resources =
                 try {
                     appContext.packageManager.getResourcesForApplication(pack)
-                } catch (e: PackageManager.NameNotFoundException) {
+                } catch (_: PackageManager.NameNotFoundException) {
                     Toast.makeText(context, context.getString(R.string.icon_pack_not_found, pack), Toast.LENGTH_SHORT).show()
                     null
                 }
@@ -91,7 +85,7 @@ object IconPacks {
         ): HashMap<ComponentName, String> {
             // Time sensitive
             fun parse(parser: XmlPullParser): HashMap<ComponentName, String> {
-                val result = HashMap<ComponentName, String>(2048) // Prealloc
+                val result = HashMap<ComponentName, String>(2048) // Preallocate
                 while (true) {
                     when (parser.next()) {
                         XmlPullParser.START_TAG -> {
@@ -126,18 +120,15 @@ object IconPacks {
                         XmlPullParser.END_DOCUMENT -> return result
                     }
                 }
-
-                return result
             }
 
             // 1. Try res/xml/appfilter.xml.
             @SuppressLint("DiscouragedAPI")
-            val xmlId =
-                resources.getIdentifier(
-                    "appfilter",
-                    "xml",
-                    pack,
-                )
+            val xmlId = resources.getIdentifier(
+                "app" + "filter",
+                "xml",
+                pack,
+            )
 
             if (xmlId != 0) {
                 return resources.getXml(xmlId).use { parser ->

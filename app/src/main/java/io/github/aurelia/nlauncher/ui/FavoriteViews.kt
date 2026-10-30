@@ -14,10 +14,6 @@ import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 
-/**
- * Builds a favorite row. The home screen and the editor's preview both go through
- * here, so the row being edited is guaranteed to look exactly like the real one.
- */
 object FavoriteViews {
     fun create(
         inflater: LayoutInflater,

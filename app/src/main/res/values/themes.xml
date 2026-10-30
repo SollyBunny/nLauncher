@@ -3,7 +3,7 @@
     <!--
         Plain opaque theme used by the settings screen.
     -->
-    <style name="Theme.Mlauncherish" parent="@android:style/Theme.Material.NoActionBar">
+    <style name="Theme.nLauncher" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/settings_background</item>
         <item name="android:colorAccent">@android:color/holo_blue_light</item>
     </style>
@@ -14,7 +14,7 @@
         the platform also forwards touch events to the live wallpaper for
         interactivity. Screens that need an opaque background paint their own.
     -->
-    <style name="Theme.Mlauncherish.Launcher" parent="@android:style/Theme.Material.NoActionBar">
+    <style name="Theme.nLauncher.Launcher" parent="@android:style/Theme.Material.NoActionBar">
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:colorBackgroundCacheHint">@null</item>
