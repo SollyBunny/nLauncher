@@ -47,9 +47,7 @@ object AppCatalogWatcher {
         }
     }
 
-    fun watchAppCatalog(
-        callback: (AppCatalog?) -> Unit,
-    ) {
+    fun watchAppCatalog(callback: (AppCatalog?) -> Unit) {
         callbacks += callback
         if (cached != null) {
             callback(cached)

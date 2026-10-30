@@ -124,11 +124,12 @@ object IconPacks {
 
             // 1. Try res/xml/appfilter.xml.
             @SuppressLint("DiscouragedAPI")
-            val xmlId = resources.getIdentifier(
-                "app" + "filter",
-                "xml",
-                pack,
-            )
+            val xmlId =
+                resources.getIdentifier(
+                    "app" + "filter",
+                    "xml",
+                    pack,
+                )
 
             if (xmlId != 0) {
                 return resources.getXml(xmlId).use { parser ->

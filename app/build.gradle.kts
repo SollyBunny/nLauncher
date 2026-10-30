@@ -66,9 +66,11 @@ android {
         abi {
             isEnable = true
             reset()
-            val arm64Only = providers.gradleProperty("arm64Only")
-                .map { it.toBoolean() }
-                .getOrElse(false)
+            val arm64Only =
+                providers
+                    .gradleProperty("arm64Only")
+                    .map { it.toBoolean() }
+                    .getOrElse(false)
             if (arm64Only) {
                 include("arm64-v8a")
                 isUniversalApk = false
