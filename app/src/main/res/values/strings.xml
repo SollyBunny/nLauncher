@@ -32,6 +32,9 @@
     <string name="color_blue">Blue</string>
     <string name="color_purple">Purple</string>
     <string name="color_pink">Pink</string>
+    <string name="color_hue">Hue</string>
+    <string name="color_saturation">Saturation</string>
+    <string name="color_value">Value</string>
 
     <!-- Icon pack, under Look and feel -->
     <string name="icon_pack">Icon pack</string>

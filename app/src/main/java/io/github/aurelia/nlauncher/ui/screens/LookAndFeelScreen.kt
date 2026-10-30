@@ -124,17 +124,10 @@ class LookAndFeelScreen(
     }
 
     private fun chooseTextColor() {
-        val labels = TEXT_COLOR_NAMES.map { activity.getString(it) }.toTypedArray()
-        val selected = TEXT_COLOR_VALUES.indexOf(LauncherConfig.textColor(activity))
-        AlertDialog
-            .Builder(activity)
-            .setTitle(R.string.text_color)
-            .setSingleChoiceItems(labels, selected) { dialog, which ->
-                LauncherConfig.saveTextColor(activity, TEXT_COLOR_VALUES[which])
-                rebuild()
-                dialog.dismiss()
-            }.setNegativeButton(android.R.string.cancel, null)
-            .show()
+        showHslColorPicker(activity, LauncherConfig.textColor(activity)) { color ->
+            LauncherConfig.saveTextColor(activity, color)
+            rebuild()
+        }
     }
 
     /** A row naming a setting, with its current value after it. */
