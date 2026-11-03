@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    The body of the text colour dialog: the editable hex field, a large preview, a
+    saturation/value square, and a hue bar. The dialog itself is the platform's normal
+    alert dialog, so it keeps the same square shape as every other dialog.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:fillViewport="false"
+    android:scrollbars="none">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingStart="24dp"
+        android:paddingTop="8dp"
+        android:paddingEnd="24dp"
+        android:paddingBottom="8dp">
+
+        <EditText
+            android:id="@+id/color_hex"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/color_hex_hint"
+            android:imeOptions="actionDone"
+            android:importantForAutofill="no"
+            android:inputType="textCapCharacters|textNoSuggestions"
+            android:maxLines="1"
+            android:selectAllOnFocus="true" />
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="72dp"
+            android:layout_marginTop="8dp">
+
+            <View
+                android:id="@+id/color_preview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" />
+
+            <TextView
+                android:id="@+id/color_preview_text"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:importantForAccessibility="no"
+                android:text="@string/color_preview"
+                android:textSize="28sp"
+                android:textStyle="bold" />
+
+        </FrameLayout>
+
+        <io.github.aurelia.nlauncher.ui.screens.ColorSaturationValueView
+            android:id="@+id/color_saturation_value"
+            android:layout_width="match_parent"
+            android:layout_height="168dp"
+            android:layout_marginTop="16dp"
+            android:contentDescription="@string/color_saturation" />
+
+        <io.github.aurelia.nlauncher.ui.screens.ColorHueView
+            android:id="@+id/color_hue_bar"
+            android:layout_width="match_parent"
+            android:layout_height="24dp"
+            android:layout_marginTop="16dp"
+            android:contentDescription="@string/color_hue" />
+
+    </LinearLayout>
+
+</ScrollView>

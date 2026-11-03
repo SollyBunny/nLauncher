@@ -47,7 +47,13 @@ class LookAndFeelScreen(
                 LauncherConfig.DEFAULT_LABEL_TEXT_SP,
             ) { LauncherConfig.saveLabelTextSp(activity, it) },
         )
-        rows.addView(settingRow(R.string.text_color, textColorSummary()) { chooseTextColor() })
+        rows.addView(
+            settingRow(
+                R.string.text_color,
+                textColorSummary(),
+                LauncherConfig.textColor(activity),
+            ) { chooseTextColor() },
+        )
         rows.addView(
             sizeRow(
                 R.string.icon_size,
@@ -63,8 +69,7 @@ class LookAndFeelScreen(
 
     private fun textColorSummary(): String {
         val color = LauncherConfig.textColor(activity)
-        val index = TEXT_COLOR_VALUES.indexOf(color)
-        return if (index >= 0) activity.getString(TEXT_COLOR_NAMES[index]) else String.format(Locale.ROOT, "#%08X", color)
+        return String.format(Locale.ROOT, "#%06X", color and 0xFFFFFF)
     }
 
     /**
@@ -124,28 +129,25 @@ class LookAndFeelScreen(
     }
 
     private fun chooseTextColor() {
-        val labels = TEXT_COLOR_NAMES.map { activity.getString(it) }.toTypedArray()
-        val selected = TEXT_COLOR_VALUES.indexOf(LauncherConfig.textColor(activity))
-        AlertDialog
-            .Builder(activity)
-            .setTitle(R.string.text_color)
-            .setSingleChoiceItems(labels, selected) { dialog, which ->
-                LauncherConfig.saveTextColor(activity, TEXT_COLOR_VALUES[which])
-                rebuild()
-                dialog.dismiss()
-            }.setNegativeButton(android.R.string.cancel, null)
-            .show()
+        showColorPicker(activity, LauncherConfig.textColor(activity)) { color ->
+            LauncherConfig.saveTextColor(activity, color)
+            rebuild()
+        }
     }
 
     /** A row naming a setting, with its current value after it. */
     private fun settingRow(
         titleRes: Int,
         summary: String,
+        valueColor: Int? = null,
         onClick: () -> Unit,
     ): View {
         val row = activity.layoutInflater.inflate(R.layout.item_gesture, rows, false)
         row.findViewById<TextView>(R.id.gesture_name).setText(titleRes)
-        row.findViewById<TextView>(R.id.gesture_action).text = summary
+        row.findViewById<TextView>(R.id.gesture_action).apply {
+            text = summary
+            if (valueColor != null) setTextColor(valueColor)
+        }
         row.setOnClickListener { onClick() }
         return row
     }
@@ -235,37 +237,5 @@ class LookAndFeelScreen(
         private const val ICON_SIZE_MIN = 24
         private const val ICON_SIZE_MAX = 96
         private const val ICON_SIZE_STEP = 8
-
-        private val TEXT_COLOR_VALUES =
-            intArrayOf(
-                0xFFFFFFFF.toInt(),
-                0xFFE0E0E0.toInt(),
-                0xFF9E9E9E.toInt(),
-                0xFF000000.toInt(),
-                0xFFFF5252.toInt(),
-                0xFFFF9800.toInt(),
-                0xFFFFEB3B.toInt(),
-                0xFF66BB6A.toInt(),
-                0xFF26C6DA.toInt(),
-                0xFF42A5F5.toInt(),
-                0xFFAB47BC.toInt(),
-                0xFFEC407A.toInt(),
-            )
-
-        private val TEXT_COLOR_NAMES =
-            intArrayOf(
-                R.string.color_white,
-                R.string.color_light_gray,
-                R.string.color_gray,
-                R.string.color_black,
-                R.string.color_red,
-                R.string.color_orange,
-                R.string.color_yellow,
-                R.string.color_green,
-                R.string.color_cyan,
-                R.string.color_blue,
-                R.string.color_purple,
-                R.string.color_pink,
-            )
     }
 }
