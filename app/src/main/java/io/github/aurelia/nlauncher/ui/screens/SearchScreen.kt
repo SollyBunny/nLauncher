@@ -1,8 +1,15 @@
 package io.github.aurelia.nlauncher.ui.screens
 
 import android.content.Intent
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.PixelFormat
 import android.graphics.Typeface
+import android.graphics.drawable.ColorDrawable
+import android.graphics.drawable.Drawable
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import android.text.Editable
 import android.text.TextWatcher
@@ -13,6 +20,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.BaseAdapter
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ListView
 import android.widget.ScrollView
@@ -40,6 +48,7 @@ class SearchScreen(
     override val view: View = activity.layoutInflater.inflate(R.layout.screen_search, null, false)
 
     private val searchInput: EditText = view.findViewById(R.id.search_input)
+    private val searchIcon: ImageView = view.findViewById(R.id.search_icon)
     private val listContainer: FrameLayout = view.findViewById(R.id.list_container)
     private val letterBar =
         ScrollView(activity).apply {
@@ -60,6 +69,9 @@ class SearchScreen(
     private var active = false
     private var catalog: AppCatalog? = null
 
+    /** The one cursor drawable, kept so recoloring it reaches the Editor's cached copy. */
+    private var cursorDrawable: ColorDrawable? = null
+
     /**
      * Whether the results are ordered by how often they have been picked while the
      * query is empty. The home screen's search gesture turns this on; every other
@@ -79,6 +91,85 @@ class SearchScreen(
         // always what the window reserved for it, and guessing leaves a gap above the
         // search bar.
         view.padForSystemBars(ime = true)
+
+        applySearchBarAppearance()
+        applyLetterBarAppearance()
+    }
+
+    /**
+     * The typed query uses the configured text color as-is, while the hint fades that
+     * same color to 80% so it reads as a preview of the text rather than as content.
+     * Both carry the launcher's usual shadow, and the cursor matches the text color.
+     *
+     * The query and the search icon follow the configured text size; the icon keeps
+     * its 24dp-at-default proportion so the bar scales as a whole. The configured
+     * icon size is not used here: that setting is only for app icons.
+     */
+    private fun applySearchBarAppearance() {
+        val textColor = LauncherConfig.textColor(activity)
+        searchInput.setTextColor(textColor)
+        val textSp = LauncherConfig.labelTextSp(activity)
+        searchInput.textSize = textSp
+        searchInput.setHintTextColor(faded(textColor, FADED_ALPHA))
+        searchInput.setShadowLayer(3f, 1f, 1f, SHADOW_COLOR)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // The Editor caches the cursor drawable the first time it draws it, so a
+            // newly set drawable would never be picked up. Keep one instance and only
+            // change its color, and the cached reference follows along.
+            val cursor = cursorDrawable ?: newCursorDrawable(textColor).also {
+                cursorDrawable = it
+                searchInput.setTextCursorDrawable(it)
+            }
+            cursor.setColor(textColor)
+        }
+        val iconSize = (textSp * SEARCH_ICON_DP / LauncherConfig.DEFAULT_LABEL_TEXT_SP).spToPx(activity)
+        searchIcon.layoutParams =
+            searchIcon.layoutParams.apply {
+                width = iconSize
+                height = iconSize
+            }
+        val iconState = activity.getDrawable(R.drawable.ic_search)?.constantState ?: return
+        searchIcon.setImageDrawable(
+            ShadowedIconDrawable(
+                shadowIcon = iconState.newDrawable(activity.resources).mutate().apply { setTint(SHADOW_COLOR) },
+                icon = iconState.newDrawable(activity.resources).mutate().apply { setTint(textColor) },
+            ),
+        )
+    }
+
+    /** A text-color cursor as wide as the platform's own. */
+    private fun newCursorDrawable(color: Int): ColorDrawable {
+        val cursorWidth = (2 * activity.resources.displayMetrics.density).roundToInt()
+        return object : ColorDrawable(color) {
+            override fun getIntrinsicWidth(): Int = cursorWidth
+        }
+    }
+
+    /**
+     * The letter index follows the same colors: its scrollbar and the unselected
+     * letters fade the text color to 80%, while the current letter is drawn at full
+     * strength.
+     */
+    private fun applyLetterBarAppearance() {
+        val textColor = LauncherConfig.textColor(activity)
+        val fadedColor = faded(textColor, FADED_ALPHA)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            letterBar.verticalScrollbarThumbDrawable
+                ?.mutate()
+                ?.setTint(fadedColor)
+        }
+        for ((letter, cell) in letterCells) {
+            cell.setTextColor(if (letter == highlighted) textColor else fadedColor)
+        }
+    }
+
+    /** [color] with its own alpha scaled by [factor]. */
+    private fun faded(
+        color: Int,
+        factor: Float,
+    ): Int {
+        val alpha = (Color.alpha(color) * factor).roundToInt()
+        return Color.argb(alpha, Color.red(color), Color.green(color), Color.blue(color))
     }
 
     /** Draw the results, or explain that there is nothing to pick. */
@@ -112,6 +203,8 @@ class SearchScreen(
 
     override fun onActivated() {
         active = true
+        applySearchBarAppearance()
+        applyLetterBarAppearance()
         show()
         // Every visit starts a fresh search. The input does not depend on the app
         // list, so it is set up even while a very fast first open is still waiting
@@ -237,12 +330,14 @@ class SearchScreen(
         highlighted = null
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val labelSp = LauncherConfig.labelTextSp(activity)
+        val unselected = faded(LauncherConfig.textColor(activity), FADED_ALPHA)
         for (letter in ALL_LETTERS) {
             val cellView = TextView(activity)
             cellView.text = letter.uppercaseChar().toString()
             cellView.textSize = labelSp
             cellView.gravity = Gravity.CENTER
-            cellView.setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
+            cellView.setShadowLayer(3f, 1f, 1f, SHADOW_COLOR)
+            cellView.setTextColor(unselected)
             cellView.setOnClickListener { jumpTo(letter) }
             cellView.visibility = View.GONE
             letterCells[letter] = cellView
@@ -279,12 +374,12 @@ class SearchScreen(
         val letter = letterOf(adapter.getItem(position) as AppEntry)
         if (letter == highlighted) return
         highlighted = letter
+        val textColor = LauncherConfig.textColor(activity)
+        val unselected = faded(textColor, FADED_ALPHA)
         for ((cellLetter, cell) in letterCells) {
             val current = cellLetter == letter
             cell.typeface = if (current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-            cell.setTextColor(
-                activity.getColor(if (current) R.color.text_primary else R.color.icon_tint_muted),
-            )
+            cell.setTextColor(if (current) textColor else unselected)
         }
         // Scroll the highlighted letter into the middle of the scrollable index column.
         val letterCell = letterCells[letter]
@@ -443,6 +538,15 @@ class SearchScreen(
     companion object {
         const val KEY = "search"
 
+        /** Search icon size in dp at the default text size; it scales with the text size. */
+        private const val SEARCH_ICON_DP = 24f
+
+        /** The shadow the launcher's text carries, reused for the search icon. */
+        private val SHADOW_COLOR = 0x99000000.toInt()
+
+        /** How much of the text color's alpha muted text keeps: the hint and the index. */
+        private const val FADED_ALPHA = 0.8f
+
         /** Every letter the index can show: '#' for non-letters, then the alphabet. */
         private val ALL_LETTERS: List<Char> = listOf(NON_LETTER) + ('a'..'z').toList()
     }
@@ -450,6 +554,44 @@ class SearchScreen(
 
 /** The index letter for anything that does not start with one of the a-z letters. */
 private const val NON_LETTER = '#'
+
+/**
+ * The search icon with the same drop shadow as the search text: it is drawn twice,
+ * once offset in the shadow color and once in its own color. Two vector draws are
+ * cheaper than rendering the icon to a bitmap for a real blur, and at icon size the
+ * difference is not visible.
+ */
+private class ShadowedIconDrawable(
+    private val shadowIcon: Drawable,
+    private val icon: Drawable,
+) : Drawable() {
+    override fun draw(canvas: Canvas) {
+        shadowIcon.setBounds(bounds)
+        icon.setBounds(bounds)
+        canvas.save()
+        canvas.translate(SHADOW_OFFSET, SHADOW_OFFSET)
+        shadowIcon.draw(canvas)
+        canvas.restore()
+        icon.draw(canvas)
+    }
+
+    override fun setAlpha(alpha: Int) {
+        shadowIcon.alpha = alpha
+        icon.alpha = alpha
+    }
+
+    override fun setColorFilter(colorFilter: ColorFilter?) {
+        shadowIcon.colorFilter = colorFilter
+        icon.colorFilter = colorFilter
+    }
+
+    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
+
+    private companion object {
+        /** The text shadow's one-pixel offset, in both directions. */
+        const val SHADOW_OFFSET = 1f
+    }
+}
 
 /**
  * The index letter a label belongs under: its first character if that is one of the
