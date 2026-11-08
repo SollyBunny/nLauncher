@@ -12,6 +12,8 @@
     <string name="menu_favorites">Favorite apps</string>
     <string name="menu_widgets">Widgets</string>
     <string name="menu_gestures">Gestures</string>
+    <string name="launcher_status_default">%1$s is set as default launcher</string>
+    <string name="launcher_status_not_default">%1$s is not set as launcher, click to set</string>
 
     <!-- Look and feel -->
     <string name="text_size">Text size</string>
