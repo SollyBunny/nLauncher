@@ -36,6 +36,7 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.spToPx
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -96,15 +97,6 @@ class SearchScreen(
         applyLetterBarAppearance()
     }
 
-    /**
-     * The typed query uses the configured text color as-is, while the hint fades that
-     * same color to 80% so it reads as a preview of the text rather than as content.
-     * Both carry the launcher's usual shadow, and the cursor matches the text color.
-     *
-     * The query and the search icon follow the configured text size; the icon keeps
-     * its 24dp-at-default proportion so the bar scales as a whole. The configured
-     * icon size is not used here: that setting is only for app icons.
-     */
     private fun applySearchBarAppearance() {
         val textColor = LauncherConfig.textColor(activity)
         searchInput.setTextColor(textColor)
@@ -116,7 +108,9 @@ class SearchScreen(
             // The Editor caches the cursor drawable the first time it draws it, so a
             // newly set drawable would never be picked up. Keep one instance and only
             // change its color, and the cached reference follows along.
-            val cursor = cursorDrawable ?: newCursorDrawable(textColor).also {
+            val cursor = cursorDrawable ?: object : ColorDrawable(textColor) {
+                override fun getIntrinsicWidth(): Int = 2f.dpToPx(activity)
+            }.also {
                 cursorDrawable = it
                 searchInput.setTextCursorDrawable(it)
             }
@@ -137,19 +131,6 @@ class SearchScreen(
         )
     }
 
-    /** A text-color cursor as wide as the platform's own. */
-    private fun newCursorDrawable(color: Int): ColorDrawable {
-        val cursorWidth = (2 * activity.resources.displayMetrics.density).roundToInt()
-        return object : ColorDrawable(color) {
-            override fun getIntrinsicWidth(): Int = cursorWidth
-        }
-    }
-
-    /**
-     * The letter index follows the same colors: its scrollbar and the unselected
-     * letters fade the text color to 80%, while the current letter is drawn at full
-     * strength.
-     */
     private fun applyLetterBarAppearance() {
         val textColor = LauncherConfig.textColor(activity)
         val fadedColor = faded(textColor, FADED_ALPHA)
