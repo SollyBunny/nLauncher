@@ -72,6 +72,7 @@
 
     <string name="dialog_choose_action">Choose action</string>
     <string name="search_apps">Search apps</string>
+    <string name="recent_apps">Recent apps</string>
 
     <string name="error_keep_settings_title">Can\'t save that</string>
     <string name="error_keep_settings">At least one gesture has to open nLauncher settings, otherwise you could not get back here.</string>

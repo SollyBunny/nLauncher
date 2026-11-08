@@ -36,6 +36,7 @@ import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.spToPx
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -57,6 +58,14 @@ class SearchScreen(
 
     /** Every index cell, built once; the filter hides the ones it has no results for. */
     private val letterCells = mutableMapOf<Char, TextView>()
+
+    /** The clock above the letters, which jumps back to the recent section. */
+    private var recentCell: ImageView? = null
+    private var recentTint = 0
+
+    /** Whether the list is currently showing the recent section at its top. */
+    private var recentHighlighted = false
+
     private var highlighted: Char? = null
 
     private var adapter: Adapter? = null
@@ -73,8 +82,8 @@ class SearchScreen(
     private var cursorDrawable: ColorDrawable? = null
 
     /**
-     * Whether the results are ordered by how often they have been picked while the
-     * query is empty. The home screen's search gesture turns this on; every other
+     * Whether the empty query leads with the recent apps (newest first) and then the
+     * alphabetical rest. The home screen's search gesture turns this on; every other
      * caller wants the plain alphabetical picker.
      */
     var sortByUsage = false
@@ -148,7 +157,8 @@ class SearchScreen(
     /**
      * The letter index follows the same colors: its scrollbar and the unselected
      * letters fade the text color to 80%, while the current letter is drawn at full
-     * strength.
+     * strength. The clock is the index's entry for the recent section, so it is at
+     * full strength while that section is on screen and fades with the letters after.
      */
     private fun applyLetterBarAppearance() {
         val textColor = LauncherConfig.textColor(activity)
@@ -161,6 +171,20 @@ class SearchScreen(
         for ((letter, cell) in letterCells) {
             cell.setTextColor(if (letter == highlighted) textColor else fadedColor)
         }
+        val recentColor = if (recentHighlighted) textColor else fadedColor
+        if (recentColor != recentTint) {
+            recentTint = recentColor
+            recentCell?.setImageDrawable(recentIcon(recentColor))
+        }
+    }
+
+    /** The index's clock, carrying the same shadow as the text and search icon. */
+    private fun recentIcon(color: Int): Drawable? {
+        val state = activity.getDrawable(R.drawable.ic_recent)?.constantState ?: return null
+        return ShadowedIconDrawable(
+            shadowIcon = state.newDrawable(activity.resources).mutate().apply { setTint(SHADOW_COLOR) },
+            icon = state.newDrawable(activity.resources).mutate().apply { setTint(color) },
+        )
     }
 
     /** [color] with its own alpha scaled by [factor]. */
@@ -318,19 +342,45 @@ class SearchScreen(
      * Every letter the index can show, in the one column, built once. Filtering hides
      * cells rather than rebuilding them, so typing stays allocation free.
      *
+     * The clock sits above the letters and marks the recent section the empty query
+     * shows. It is only visible when that section exists; otherwise the bar starts at
+     * the letters, exactly as it did before.
+     *
      * The column scrolls, which is what keeps the whole alphabet reachable with the
-     * keyboard up: one column of 26 letters plus '#' is taller than what is left of
-     * the screen then, and shrinking the cells to fit would leave them unreadable.
+     * keyboard up: one column of clock plus 26 letters plus '#' is taller than what is
+     * left of the screen then, and shrinking the cells to fit would leave them
+     * unreadable.
      */
     private fun buildLetterBar() {
         letterBar.removeAllViews()
         letterCells.clear()
+        recentCell = null
         // The cells are rebuilt whenever the size changes, so none of them keeps the
         // highlight from the previous build.
         highlighted = null
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val labelSp = LauncherConfig.labelTextSp(activity)
         val unselected = faded(LauncherConfig.textColor(activity), FADED_ALPHA)
+
+        val metrics = TextView(activity).apply { textSize = labelSp }.paint.fontMetrics
+        val textHeight = metrics.descent - metrics.ascent
+        val cellSize = (textHeight * 1.5f).roundToInt()
+        val iconSize = textHeight.roundToInt()
+        val iconInset = ((cellSize - iconSize) / 2f).roundToInt()
+
+        val recent =
+            ImageView(activity).apply {
+                scaleType = ImageView.ScaleType.FIT_XY
+                setPadding(iconInset, iconInset, iconInset, iconInset)
+                contentDescription = activity.getString(R.string.recent_apps)
+                setImageDrawable(recentIcon(unselected))
+                setOnClickListener { listView?.setSelection(0) }
+                visibility = View.GONE
+            }
+        recentCell = recent
+        recentTint = unselected
+        column.addView(recent, LinearLayout.LayoutParams(cellSize, cellSize))
+
         for (letter in ALL_LETTERS) {
             val cellView = TextView(activity)
             cellView.text = letter.uppercaseChar().toString()
@@ -342,8 +392,6 @@ class SearchScreen(
             cellView.visibility = View.GONE
             letterCells[letter] = cellView
 
-            val textHeight = cellView.paint.fontMetrics.let { it.descent - it.ascent }
-            val cellSize = (textHeight * 1.5f).roundToInt()
             column.addView(cellView, LinearLayout.LayoutParams(cellSize, cellSize))
         }
         letterBar.addView(column)
@@ -351,41 +399,40 @@ class SearchScreen(
 
     /** Show the letters the current results actually have, and hide the rest. */
     private fun updateLetters() {
-        // Jumping by letter makes no sense while the results are ordered by usage.
-        letterBar.visibility = if (usageOrdered()) View.GONE else View.VISIBLE
+        // The recent section is its own entry, the clock; the letters cover only the
+        // alphabetical rest below it (and the results while a query is typed).
+        recentCell?.visibility = if ((adapter?.recentCount ?: 0) > 0) View.VISIBLE else View.GONE
         val shown = adapter?.letters()?.toSet().orEmpty()
         for ((letter, cellView) in letterCells) {
             cellView.visibility = if (letter in shown) View.VISIBLE else View.GONE
         }
+        applyLetterBarAppearance()
     }
 
-    /** Results ordered by how often they have been picked, or only when searching. */
-    private fun usageOrdered(): Boolean = sortByUsage && searchInput.text.isBlank()
-
     /**
-     * Mark the letter of the topmost visible app as the current one: bold and in the
-     * primary color, while the other letters stay muted. Nothing happens while the
-     * list is still within the same letter.
+     * Mark the section at the top of the list as the current one: the clock while the
+     * recent apps show, otherwise the topmost app's letter. The current entry is bold
+     * and in the full text color, while the rest stay muted. Nothing happens while the
+     * list is still within the same section.
      */
     private fun highlightVisibleLetter() {
         val adapter = this.adapter ?: return
         val position = listView?.firstVisiblePosition ?: return
         if (position < 0 || position >= adapter.count) return
-        val letter = letterOf(adapter.getItem(position) as AppEntry)
-        if (letter == highlighted) return
+        val inRecent = position < adapter.recentCount
+        val letter = if (inRecent) null else letterOf(adapter.getItem(position) as AppEntry)
+        if (letter == highlighted && inRecent == recentHighlighted) return
         highlighted = letter
-        val textColor = LauncherConfig.textColor(activity)
-        val unselected = faded(textColor, FADED_ALPHA)
+        recentHighlighted = inRecent
         for ((cellLetter, cell) in letterCells) {
-            val current = cellLetter == letter
-            cell.typeface = if (current) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
-            cell.setTextColor(if (current) textColor else unselected)
+            cell.typeface = if (cellLetter == letter) Typeface.DEFAULT_BOLD else Typeface.DEFAULT
         }
-        // Scroll the highlighted letter into the middle of the scrollable index column.
-        val letterCell = letterCells[letter]
-        if (letterCell != null) {
-            val top = letterCell.top
-            val bottom = letterCell.bottom
+        applyLetterBarAppearance()
+        // Scroll the current entry into the middle of the scrollable index column.
+        val cell = if (inRecent) recentCell else letter?.let { letterCells[it] }
+        if (cell != null) {
+            val top = cell.top
+            val bottom = cell.bottom
             letterBar.smoothScrollTo(0, top - letterBar.height / 2 + (bottom - top) / 2)
         }
     }
@@ -416,6 +463,13 @@ class SearchScreen(
         private var shown: List<AppEntry> = all
         private var sortByUsage = false
 
+        /**
+         * How many entries at the top of [shown] are the recent section. They are not
+         * under any letter, so the index leaves them out and the clock stands for them.
+         */
+        var recentCount = 0
+            private set
+
         /** Replace the apps behind the current query, after a package change. */
         fun update(
             apps: List<AppEntry>,
@@ -427,9 +481,12 @@ class SearchScreen(
             filter(query)
         }
 
-        /** Distinct index labels in the results: '#' first, then a-z. */
+        /**
+         * Distinct index labels in the alphabetical part of the results: '#' first,
+         * then a-z.
+         */
         fun letters(): List<Char> {
-            val groups = shown.map { letterOf(it) }.distinct()
+            val groups = shown.subList(recentCount, shown.size).map { letterOf(it) }.distinct()
             return if (NON_LETTER in groups) {
                 listOf(NON_LETTER) + groups.filter { it != NON_LETTER }.sorted()
             } else {
@@ -438,25 +495,31 @@ class SearchScreen(
         }
 
         /**
-         * First shown position under [letter]: for '#' the first label that does not
-         * start with an a-z character, otherwise the first under that letter.
-         * -1 if there is none.
+         * First shown position under [letter], below the recent section: for '#' the
+         * first label that does not start with an a-z character, otherwise the first
+         * under that letter. -1 if there is none.
          */
-        fun indexOfLetter(letter: Char): Int = shown.indexOfFirst { letterOf(it) == letter }
+        fun indexOfLetter(letter: Char): Int {
+            for (index in recentCount until shown.size) {
+                if (letterOf(shown[index]) == letter) return index
+            }
+            return -1
+        }
 
         fun filter(query: String) {
             val q = query.trim().lowercase(Locale.ROOT)
+            recentCount = 0
             shown =
                 when {
                     q.isNotEmpty() -> all.filter { it.searchLabel.contains(q) }
                     sortByUsage -> {
-                        // Most picked first; apps that were never picked stay in
-                        // alphabetical order at the end.
-                        val ranks = AppUsage.ranks(activity)
-                        all.sortedWith(
-                            compareBy<AppEntry> { ranks[it.key] ?: Int.MAX_VALUE }
-                                .thenBy { it.searchLabel },
-                        )
+                        // Recent apps first, newest first; everything else keeps the
+                        // alphabetical order the catalog already has.
+                        val byKey = all.associateBy { it.key }
+                        val recent = AppUsage.recentKeys(activity).mapNotNull { byKey[it] }
+                        val recentKeys = recent.mapTo(HashSet(recent.size)) { it.key }
+                        recentCount = recent.size
+                        recent + all.filter { it.key !in recentKeys }
                     }
                     else -> all
                 }
