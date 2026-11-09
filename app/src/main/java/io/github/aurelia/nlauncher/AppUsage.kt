@@ -15,11 +15,6 @@ object AppUsage {
     private const val KEY_RECENT = "recent"
     private const val LIMIT = 100
 
-    // Ranking the buffer means grouping and sorting it, so the result is kept against
-    // the exact text it came from. Every pick rewrites that text, which invalidates it.
-    private var cachedRaw: String? = null
-    private var cachedRanks: Map<String, Int> = emptyMap()
-
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     /** Note that [key] was picked, dropping the oldest pick once the buffer is full. */
@@ -34,25 +29,12 @@ object AppUsage {
     }
 
     /**
-     * Every app in the buffer, ranked: the most picked first, and apps picked equally
-     * often keep the most recently picked first. Apps that have never been picked are
-     * absent, so callers can put them last.
+     * The apps in the recent buffer, newest first, each once.
+     *
+     * The buffer holds the last [LIMIT] picks, so this is both the recent section and
+     * its order: an app that has not been opened in a while drops out on its own.
      */
-    fun ranks(context: Context): Map<String, Int> {
-        val raw = prefs(context).getString(KEY_RECENT, null)
-        if (raw == cachedRaw) return cachedRanks
-        val recent = parse(raw)
-        val counts = recent.groupingBy { it }.eachCount()
-        // The stored order is newest first, so an app's first index is its last use.
-        val newest = recent.withIndex().associate { (index, key) -> key to index }
-        cachedRanks =
-            counts.keys
-                .sortedWith(compareByDescending<String> { counts.getValue(it) }.thenBy { newest.getValue(it) })
-                .withIndex()
-                .associate { (rank, key) -> key to rank }
-        cachedRaw = raw
-        return cachedRanks
-    }
+    fun recentKeys(context: Context): List<String> = parse(prefs(context).getString(KEY_RECENT, null)).distinct()
 
     private fun parse(raw: String?): List<String> = raw?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
 }
