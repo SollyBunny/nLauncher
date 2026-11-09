@@ -2,10 +2,33 @@ package io.github.aurelia.nlauncher
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.provider.AlarmClock
 import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.provider.Settings
+import android.net.Uri
+
+// Try to resolve the app that would launch from this intent
+fun appifyIntent(context: Context, intent: Intent): Intent {
+    val pm = context.packageManager
+
+    val resolver = pm.resolveActivity(
+        intent,
+        PackageManager.MATCH_DEFAULT_ONLY
+    )?.activityInfo
+
+    val selected = pm.queryIntentActivities(
+        intent,
+        PackageManager.MATCH_DEFAULT_ONLY
+    ).firstOrNull {
+        it.activityInfo.packageName != resolver?.packageName
+    } ?: return intent
+
+    return pm.getLaunchIntentForPackage(
+        selected.activityInfo.packageName
+    ) ?: intent
+}
 
 /** A press or swipe the user can bind an action to. */
 enum class Gesture(
@@ -48,6 +71,7 @@ sealed class GestureAction {
                     runCatching {
                         OpenApp(Intent.parseUri(value.removePrefix("app:"), Intent.URI_INTENT_SCHEME))
                     }.getOrElse { None }
+
                 else -> None
             }
     }
@@ -81,23 +105,30 @@ object LauncherConfig {
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    private fun defaultFavorites() =
+    private fun defaultFavorites(context: Context) =
         listOf(
-            FavoriteApp(Intent(AlarmClock.ACTION_SHOW_ALARMS)),
-            FavoriteApp(
-                Intent(Intent.ACTION_MAIN).apply {
-                    addCategory(Intent.CATEGORY_APP_MESSAGING)
-                },
-            ),
-            FavoriteApp(
-                Intent(Intent.ACTION_VIEW).apply {
-                    type = ContactsContract.Contacts.CONTENT_TYPE
-                },
-            ),
-            FavoriteApp(Intent(Intent.ACTION_DIAL)),
-            FavoriteApp(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)),
-            FavoriteApp(Intent(Settings.ACTION_SETTINGS)),
-        )
+            Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                type = "*/*"
+                addCategory(Intent.CATEGORY_OPENABLE)
+            },
+            Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com")),
+            Intent(Intent.ACTION_VIEW, Uri.parse("mailto:")),
+            Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_APP_MESSAGING)
+            },
+            Intent(Intent.ACTION_DIAL),
+            Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(
+                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
+                    "image/*"
+                )
+            },
+            Intent(Intent.ACTION_MAIN).apply {
+                addCategory(Intent.CATEGORY_APP_CALENDAR)
+            },
+            Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA),
+            Intent(Settings.ACTION_SETTINGS),
+        ).map { appifyIntent(context, it) }.distinctBy { it }.map { FavoriteApp(it) }
 
     private fun defaultWidgets() = listOf(Widget.CLOCK, Widget.DATE)
 
@@ -107,7 +138,7 @@ object LauncherConfig {
      * empty means the user deliberately removed every favorite.
      */
     fun favorites(context: Context): List<FavoriteApp> {
-        val raw = prefs(context).getString(KEY_FAVORITES, null) ?: return defaultFavorites()
+        val raw = prefs(context).getString(KEY_FAVORITES, null) ?: return defaultFavorites(context)
         if (raw == parsedRaw) return parsedFavorites
         parsedFavorites =
             raw
@@ -207,7 +238,8 @@ object LauncherConfig {
         prefs(context).edit().putFloat(KEY_ICON_SIZE_SP, sp).apply()
     }
 
-    fun gestureActions(context: Context): Map<Gesture, GestureAction> = Gesture.entries.associateWith { gestureAction(context, it) }
+    fun gestureActions(context: Context): Map<Gesture, GestureAction> =
+        Gesture.entries.associateWith { gestureAction(context, it) }
 
     fun gestureAction(
         context: Context,
@@ -233,5 +265,6 @@ object LauncherConfig {
     }
 
     /** The settings screen must stay reachable through at least one gesture. */
-    fun hasSettingsAccess(actions: Collection<GestureAction>): Boolean = actions.any { it is GestureAction.OpenSettings }
+    fun hasSettingsAccess(actions: Collection<GestureAction>): Boolean =
+        actions.any { it is GestureAction.OpenSettings }
 }

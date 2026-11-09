@@ -11,17 +11,10 @@ import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.Widget
+import io.github.aurelia.nlauncher.appifyIntent
 import java.util.Date
 
 object WidgetViews {
-    private fun launchClock(activity: LauncherActivity) {
-        // Figure out clock app from ACTION_SHOW_ALARMS intent
-        val pm = activity.packageManager
-        val alarm = Intent(AlarmClock.ACTION_SHOW_ALARMS)
-        val clockPackage = pm.resolveActivity(alarm, 0)?.activityInfo?.packageName
-        activity.launch(clockPackage?.let { pm.getLaunchIntentForPackage(it) } ?: alarm)
-    }
-
     private fun alarmText(
         context: Context,
         now: Date,
@@ -38,7 +31,7 @@ object WidgetViews {
             setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
             textSize = LauncherConfig.labelTextSp(activity) * 2.5f
             typeface = Typeface.DEFAULT_BOLD
-            setOnClickListener { launchClock(activity) }
+            setOnClickListener { appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)) }
         }
 
     private fun createDateView(activity: LauncherActivity) =
@@ -46,7 +39,7 @@ object WidgetViews {
             setTextColor(LauncherConfig.textColor(activity))
             setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
             textSize = LauncherConfig.labelTextSp(activity)
-            setOnClickListener { launchClock(activity) }
+            setOnClickListener { appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)) }
         }
 
     private fun createAlarmView(activity: LauncherActivity) =
