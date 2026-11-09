@@ -35,8 +35,8 @@ import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
-import io.github.aurelia.nlauncher.ui.padForSystemBars
 import io.github.aurelia.nlauncher.ui.dpToPx
+import io.github.aurelia.nlauncher.ui.padForSystemBars
 import io.github.aurelia.nlauncher.ui.spToPx
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -116,12 +116,13 @@ class SearchScreen(
             // The Editor caches the cursor drawable the first time it draws it, so a
             // newly set drawable would never be picked up. Keep one instance and only
             // change its color, and the cached reference follows along.
-            val cursor = cursorDrawable ?: object : ColorDrawable(textColor) {
-                override fun getIntrinsicWidth(): Int = 2f.dpToPx(activity)
-            }.also {
-                cursorDrawable = it
-                searchInput.setTextCursorDrawable(it)
-            }
+            val cursor =
+                cursorDrawable ?: object : ColorDrawable(textColor) {
+                    override fun getIntrinsicWidth(): Int = 2f.dpToPx(activity)
+                }.also {
+                    cursorDrawable = it
+                    searchInput.setTextCursorDrawable(it)
+                }
             cursor.setColor(textColor)
         }
         val iconSize = (textSp * SEARCH_ICON_DP / LauncherConfig.DEFAULT_LABEL_TEXT_SP).spToPx(activity)

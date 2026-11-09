@@ -3,30 +3,35 @@ package io.github.aurelia.nlauncher
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.provider.AlarmClock
-import android.provider.ContactsContract
+import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
-import android.net.Uri
 
 // Try to resolve the app that would launch from this intent
-fun appifyIntent(context: Context, intent: Intent): Intent {
+fun appifyIntent(
+    context: Context,
+    intent: Intent,
+): Intent {
     val pm = context.packageManager
 
-    val resolver = pm.resolveActivity(
-        intent,
-        PackageManager.MATCH_DEFAULT_ONLY
-    )?.activityInfo
+    val resolver =
+        pm
+            .resolveActivity(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY,
+            )?.activityInfo
 
-    val selected = pm.queryIntentActivities(
-        intent,
-        PackageManager.MATCH_DEFAULT_ONLY
-    ).firstOrNull {
-        it.activityInfo.packageName != resolver?.packageName
-    } ?: return intent
+    val selected =
+        pm
+            .queryIntentActivities(
+                intent,
+                PackageManager.MATCH_DEFAULT_ONLY,
+            ).firstOrNull {
+                it.activityInfo.packageName != resolver?.packageName
+            } ?: return intent
 
     return pm.getLaunchIntentForPackage(
-        selected.activityInfo.packageName
+        selected.activityInfo.packageName,
     ) ?: intent
 }
 
@@ -120,7 +125,7 @@ object LauncherConfig {
             Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-                    "image/*"
+                    "image/*",
                 )
             },
             Intent(Intent.ACTION_MAIN).apply {
@@ -238,8 +243,7 @@ object LauncherConfig {
         prefs(context).edit().putFloat(KEY_ICON_SIZE_SP, sp).apply()
     }
 
-    fun gestureActions(context: Context): Map<Gesture, GestureAction> =
-        Gesture.entries.associateWith { gestureAction(context, it) }
+    fun gestureActions(context: Context): Map<Gesture, GestureAction> = Gesture.entries.associateWith { gestureAction(context, it) }
 
     fun gestureAction(
         context: Context,
@@ -265,6 +269,5 @@ object LauncherConfig {
     }
 
     /** The settings screen must stay reachable through at least one gesture. */
-    fun hasSettingsAccess(actions: Collection<GestureAction>): Boolean =
-        actions.any { it is GestureAction.OpenSettings }
+    fun hasSettingsAccess(actions: Collection<GestureAction>): Boolean = actions.any { it is GestureAction.OpenSettings }
 }
