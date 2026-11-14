@@ -1,10 +1,7 @@
 package io.github.aurelia.nlauncher.ui.screens
 
 import android.content.Intent
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.ColorFilter
-import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
@@ -35,6 +32,7 @@ import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.Screen
+import io.github.aurelia.nlauncher.ui.ShadowedIconDrawable
 import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.padForSystemBars
 import io.github.aurelia.nlauncher.ui.spToPx
@@ -61,7 +59,10 @@ class SearchScreen(
 
     /** The clock above the letters, which jumps back to the recent section. */
     private var recentCell: ImageView? = null
-    private var recentTint = 0
+    private val recentCellIcon: Drawable =
+        requireNotNull(activity.getDrawable(R.drawable.ic_recent)) {
+            "Missing recent icon"
+        }
 
     /** Whether the list is currently showing the recent section at its top. */
     private var recentHighlighted = false
@@ -126,18 +127,18 @@ class SearchScreen(
             cursor.setColor(textColor)
         }
         val iconSize = (textSp * SEARCH_ICON_DP / LauncherConfig.DEFAULT_LABEL_TEXT_SP).spToPx(activity)
+        // The shadow spreads a little past the icon, so give the view that much
+        // padding; otherwise the right and bottom of the shadow are clipped.
+        val shadowPadding = ShadowedIconDrawable.SHADOW_EXTENT_PX
+        searchIcon.setPadding(shadowPadding, shadowPadding, shadowPadding, shadowPadding)
         searchIcon.layoutParams =
             searchIcon.layoutParams.apply {
-                width = iconSize
-                height = iconSize
+                width = iconSize + shadowPadding * 2
+                height = iconSize + shadowPadding * 2
             }
-        val iconState = activity.getDrawable(R.drawable.ic_search)?.constantState ?: return
-        searchIcon.setImageDrawable(
-            ShadowedIconDrawable(
-                shadowIcon = iconState.newDrawable(activity.resources).mutate().apply { setTint(SHADOW_COLOR) },
-                icon = iconState.newDrawable(activity.resources).mutate().apply { setTint(textColor) },
-            ),
-        )
+        // The layout's ic_search is already a shadowed drawable; it only needs the
+        // configured text color.
+        searchIcon.drawable?.setTint(textColor)
     }
 
     private fun applyLetterBarAppearance() {
@@ -151,20 +152,7 @@ class SearchScreen(
         for ((letter, cell) in letterCells) {
             cell.setTextColor(if (letter == highlighted) textColor else fadedColor)
         }
-        val recentColor = if (recentHighlighted) textColor else fadedColor
-        if (recentColor != recentTint) {
-            recentTint = recentColor
-            recentCell?.setImageDrawable(recentIcon(recentColor))
-        }
-    }
-
-    /** The index's clock, carrying the same shadow as the text and search icon. */
-    private fun recentIcon(color: Int): Drawable? {
-        val state = activity.getDrawable(R.drawable.ic_recent)?.constantState ?: return null
-        return ShadowedIconDrawable(
-            shadowIcon = state.newDrawable(activity.resources).mutate().apply { setTint(SHADOW_COLOR) },
-            icon = state.newDrawable(activity.resources).mutate().apply { setTint(color) },
-        )
+        recentCellIcon.setTint(if (recentHighlighted) textColor else fadedColor)
     }
 
     /** [color] with its own alpha scaled by [factor]. */
@@ -334,7 +322,6 @@ class SearchScreen(
     private fun buildLetterBar() {
         letterBar.removeAllViews()
         letterCells.clear()
-        recentCell = null
         // The cells are rebuilt whenever the size changes, so none of them keeps the
         // highlight from the previous build.
         highlighted = null
@@ -348,18 +335,17 @@ class SearchScreen(
         val iconSize = textHeight.roundToInt()
         val iconInset = ((cellSize - iconSize) / 2f).roundToInt()
 
-        val recent =
+        recentCell =
             ImageView(activity).apply {
                 scaleType = ImageView.ScaleType.FIT_XY
                 setPadding(iconInset, iconInset, iconInset, iconInset)
                 contentDescription = activity.getString(R.string.recent_apps)
-                setImageDrawable(recentIcon(unselected))
+                setImageDrawable(recentCellIcon)
                 setOnClickListener { listView?.setSelection(0) }
                 visibility = View.GONE
             }
-        recentCell = recent
-        recentTint = unselected
-        column.addView(recent, LinearLayout.LayoutParams(cellSize, cellSize))
+        recentCellIcon.setTint(unselected)
+        column.addView(recentCell, LinearLayout.LayoutParams(cellSize, cellSize))
 
         for (letter in ALL_LETTERS) {
             val cellView = TextView(activity)
@@ -545,14 +531,11 @@ class SearchScreen(
                         android.graphics.Color.TRANSPARENT,
                     )
 
-                fun setIcon(drawable: android.graphics.drawable.Drawable?) {
+                fun setIcon(drawable: Drawable?) {
                     if (view.tag != entry.key) return
-                    view.setCompoundDrawablesRelative(
-                        null,
-                        null,
-                        (drawable ?: placeholder).apply { setBounds(0, 0, size, size) },
-                        null,
-                    )
+                    val icon = ShadowedIconDrawable.wrap(drawable) ?: placeholder
+                    icon.setBounds(0, 0, size, size)
+                    view.setCompoundDrawablesRelative(null, null, icon, null)
                 }
 
                 setIcon(
@@ -585,7 +568,7 @@ class SearchScreen(
         private const val SEARCH_ICON_DP = 24f
 
         /** The shadow the launcher's text carries, reused for the search icon. */
-        private val SHADOW_COLOR = 0x99000000.toInt()
+        private const val SHADOW_COLOR = 0x99000000.toInt()
 
         /** How much of the text color's alpha muted text keeps: the hint and the index. */
         private const val FADED_ALPHA = 0.8f
@@ -597,44 +580,6 @@ class SearchScreen(
 
 /** The index letter for anything that does not start with one of the a-z letters. */
 private const val NON_LETTER = '#'
-
-/**
- * The search icon with the same drop shadow as the search text: it is drawn twice,
- * once offset in the shadow color and once in its own color. Two vector draws are
- * cheaper than rendering the icon to a bitmap for a real blur, and at icon size the
- * difference is not visible.
- */
-private class ShadowedIconDrawable(
-    private val shadowIcon: Drawable,
-    private val icon: Drawable,
-) : Drawable() {
-    override fun draw(canvas: Canvas) {
-        shadowIcon.setBounds(bounds)
-        icon.setBounds(bounds)
-        canvas.save()
-        canvas.translate(SHADOW_OFFSET, SHADOW_OFFSET)
-        shadowIcon.draw(canvas)
-        canvas.restore()
-        icon.draw(canvas)
-    }
-
-    override fun setAlpha(alpha: Int) {
-        shadowIcon.alpha = alpha
-        icon.alpha = alpha
-    }
-
-    override fun setColorFilter(colorFilter: ColorFilter?) {
-        shadowIcon.colorFilter = colorFilter
-        icon.colorFilter = colorFilter
-    }
-
-    override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
-
-    private companion object {
-        /** The text shadow's one-pixel offset, in both directions. */
-        const val SHADOW_OFFSET = 1f
-    }
-}
 
 /**
  * The index letter a label belongs under: its first character if that is one of the

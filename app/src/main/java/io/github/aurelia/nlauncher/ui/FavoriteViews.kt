@@ -39,14 +39,9 @@ object FavoriteViews {
         fun setIcon(drawable: Drawable?) {
             if (view.tag != favorite.key) return
 
-            view.setCompoundDrawablesRelative(
-                (drawable ?: placeholder).apply {
-                    setBounds(0, 0, size, size)
-                },
-                null,
-                null,
-                null,
-            )
+            val icon = ShadowedIconDrawable.wrap(drawable) ?: placeholder
+            icon.setBounds(0, 0, size, size)
+            view.setCompoundDrawablesRelative(icon, null, null, null)
         }
 
         if (iconsShown) {
