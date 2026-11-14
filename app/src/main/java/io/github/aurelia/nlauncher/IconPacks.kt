@@ -158,34 +158,9 @@ object IconPacks {
             if (resources == null) {
                 return null
             }
-            val pm = context.packageManager
-            // Icon packs index by ComponentName (app)
-            // If not present try to find what app would open if this intent were launched
-            val component =
-                intent.component ?: pm
-                    .resolveActivity(
-                        intent,
-                        PackageManager.MATCH_DEFAULT_ONLY,
-                    )?.activityInfo
-                    ?.let {
-                        // Returning ComponentName from activityInfo may lead to incorrect values such as com.android.settings/com.android.settings.homepage.SettingsHomepageActivity
-                        // So find in this package, find the first launcher activity
-                        val launchIntent =
-                            Intent(Intent.ACTION_MAIN).apply {
-                                addCategory(Intent.CATEGORY_LAUNCHER)
-                                setPackage(it.packageName)
-                            }
-
-                        pm
-                            .queryIntentActivities(
-                                launchIntent,
-                                PackageManager.MATCH_DEFAULT_ONLY,
-                            ).firstOrNull()
-                            ?.activityInfo
-                            ?.let { activity ->
-                                ComponentName(activity.packageName, activity.name)
-                            }
-                    } ?: return null
+            // Icon packs index by ComponentName (app), so look up the app that would
+            // open rather than trusting the activity an arbitrary intent names.
+            val component = launchComponent(context, intent) ?: return null
 
             // Use resolvedIcons or drawableNames
             val id =

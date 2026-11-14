@@ -1,5 +1,6 @@
 package io.github.aurelia.nlauncher
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -7,32 +8,57 @@ import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
 
-// Try to resolve the app that would launch from this intent
+/**
+ * The launcher activity of the app that would handle [intent], or null when no app
+ * can be launched for it.
+ *
+ * The activity that handles an intent is often not the one shown in the app drawer
+ * (Settings opens its homepage, a document picker opens its picker), and icon packs
+ * are indexed by the drawer's component. So this looks through the handlers until it
+ * finds a package with a launcher activity, and prefers the intent's explicit
+ * component when it has one.
+ */
+fun launchComponent(
+    context: Context,
+    intent: Intent,
+): ComponentName? {
+    intent.component?.let { return it }
+
+    val pm = context.packageManager
+    val packages =
+        buildList {
+            pm
+                .resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                ?.activityInfo
+                ?.packageName
+                ?.let(::add)
+            pm
+                .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
+                .mapTo(this) { it.activityInfo.packageName }
+        }.distinct()
+            .filter { it != context.packageName }
+
+    for (packageName in packages) {
+        // The handler itself may not be launchable (the chooser, a document picker),
+        // so use the package's launcher entry rather than the handler's activity.
+        pm.getLaunchIntentForPackage(packageName)?.component?.let { return it }
+    }
+    return null
+}
+
+/**
+ * Resolve [intent] to the app that would open it, so that favorites are app icons
+ * that launch the app itself instead of whatever screen the intent names.
+ *
+ * Falls back to [intent] when no launchable app handles it, so the favorite is still
+ * shown even if all it can do is report that nothing can open it.
+ */
 fun appifyIntent(
     context: Context,
     intent: Intent,
 ): Intent {
-    val pm = context.packageManager
-
-    val resolver =
-        pm
-            .resolveActivity(
-                intent,
-                PackageManager.MATCH_DEFAULT_ONLY,
-            )?.activityInfo
-
-    val selected =
-        pm
-            .queryIntentActivities(
-                intent,
-                PackageManager.MATCH_DEFAULT_ONLY,
-            ).firstOrNull {
-                it.activityInfo.packageName != resolver?.packageName
-            } ?: return intent
-
-    return pm.getLaunchIntentForPackage(
-        selected.activityInfo.packageName,
-    ) ?: intent
+    val component = launchComponent(context, intent) ?: return intent
+    return Intent().setComponent(component)
 }
 
 /** A press or swipe the user can bind an action to. */
