@@ -107,9 +107,9 @@ class SearchScreen(
     }
 
     private fun applySearchBarAppearance() {
-        val textColor = LauncherConfig.textColor(activity)
+        val textColor = LauncherConfig.textColor.get(activity)
         searchInput.setTextColor(textColor)
-        val textSp = LauncherConfig.labelTextSp(activity)
+        val textSp = LauncherConfig.labelTextSp.get(activity)
         searchInput.textSize = textSp
         searchInput.setHintTextColor(faded(textColor, FADED_ALPHA))
         searchInput.setShadowLayer(3f, 1f, 1f, SHADOW_COLOR)
@@ -126,7 +126,7 @@ class SearchScreen(
                 }
             cursor.setColor(textColor)
         }
-        val iconSize = (textSp * SEARCH_ICON_DP / LauncherConfig.DEFAULT_LABEL_TEXT_SP).spToPx(activity)
+        val iconSize = (textSp * SEARCH_ICON_DP / LauncherConfig.labelTextSp.default).spToPx(activity)
         // The shadow spreads a little past the icon, so give the view that much
         // padding; otherwise the right and bottom of the shadow are clipped.
         val shadowPadding = ShadowedIconDrawable.SHADOW_EXTENT_PX
@@ -142,7 +142,7 @@ class SearchScreen(
     }
 
     private fun applyLetterBarAppearance() {
-        val textColor = LauncherConfig.textColor(activity)
+        val textColor = LauncherConfig.textColor.get(activity)
         val fadedColor = faded(textColor, FADED_ALPHA)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             letterBar.verticalScrollbarThumbDrawable
@@ -157,7 +157,11 @@ class SearchScreen(
 
     /** Keep the row spacing in step with the configured density, even on a reused list. */
     private fun applySearchGap() {
-        listView?.dividerHeight = LauncherConfig.searchGapDp(activity).toFloat().dpToPx(activity)
+        listView?.dividerHeight =
+            LauncherConfig.searchGapDp
+                .get(activity)
+                .toFloat()
+                .dpToPx(activity)
     }
 
     /** [color] with its own alpha scaled by [factor]. */
@@ -172,8 +176,8 @@ class SearchScreen(
     /** Draw the results, or explain that there is nothing to pick. */
     private fun show() {
         catalog?.let { catalog ->
-            val labelSp = LauncherConfig.labelTextSp(activity)
-            val textColor = LauncherConfig.textColor(activity)
+            val labelSp = LauncherConfig.labelTextSp.get(activity)
+            val textColor = LauncherConfig.textColor.get(activity)
             if (catalog.revision == renderedRevision &&
                 sortByUsage == renderedUsage &&
                 labelSp == renderedLabelSp &&
@@ -247,7 +251,11 @@ class SearchScreen(
         // A transparent divider is the gap between rows: the rows themselves carry no
         // vertical padding, so a gap of 0 would leave them touching.
         results.divider = ColorDrawable(Color.TRANSPARENT)
-        results.dividerHeight = LauncherConfig.searchGapDp(activity).toFloat().dpToPx(activity)
+        results.dividerHeight =
+            LauncherConfig.searchGapDp
+                .get(activity)
+                .toFloat()
+                .dpToPx(activity)
         results.adapter = rows
         listView = results
 
@@ -334,8 +342,8 @@ class SearchScreen(
         // highlight from the previous build.
         highlighted = null
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        val labelSp = LauncherConfig.labelTextSp(activity)
-        val unselected = faded(LauncherConfig.textColor(activity), FADED_ALPHA)
+        val labelSp = LauncherConfig.labelTextSp.get(activity)
+        val unselected = faded(LauncherConfig.textColor.get(activity), FADED_ALPHA)
 
         val metrics = TextView(activity).apply { textSize = labelSp }.paint.fontMetrics
         val textHeight = metrics.descent - metrics.ascent
@@ -525,12 +533,12 @@ class SearchScreen(
             view.tag = entry.key
 
             view.text = entry.label
-            view.textSize = LauncherConfig.labelTextSp(activity)
-            view.setTextColor(LauncherConfig.textColor(activity))
+            view.textSize = LauncherConfig.labelTextSp.get(activity)
+            view.setTextColor(LauncherConfig.textColor.get(activity))
 
             // Configure the compound drawable.
-            val iconsShown = LauncherConfig.iconsShown(activity)
-            val size = LauncherConfig.iconSizeSp(activity).spToPx(activity)
+            val iconsShown = LauncherConfig.iconsShown.get(activity)
+            val size = LauncherConfig.iconSizeSp.get(activity).spToPx(activity)
 
             if (iconsShown) {
                 // Empty icon

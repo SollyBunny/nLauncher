@@ -42,14 +42,14 @@ class EditFavoritesScreen(
         // The "+ Add favorite" row opens the app picker; the pick becomes a favorite.
         activity.onSearchResult(KEY) { intent ->
             favorites.add(FavoriteApp(intent))
-            LauncherConfig.saveFavorites(activity, favorites)
+            LauncherConfig.favorites.set(activity, favorites)
             populate()
         }
     }
 
     override fun onActivated() {
         favorites.clear()
-        favorites.addAll(LauncherConfig.favorites(activity))
+        favorites.addAll(LauncherConfig.favorites.get(activity))
         populate()
     }
 
@@ -67,8 +67,8 @@ class EditFavoritesScreen(
         // Its + icon matches the favorites' icon size so the row lines up.
         val addLabel = add.findViewById<TextView>(R.id.add_app_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_app_icon)
-        addLabel.textSize = LauncherConfig.labelTextSp(activity)
-        val addIconSize = LauncherConfig.iconSizeSp(activity).spToPx(activity)
+        addLabel.textSize = LauncherConfig.labelTextSp.get(activity)
+        val addIconSize = LauncherConfig.iconSizeSp.get(activity).spToPx(activity)
         addIcon.layoutParams =
             addIcon.layoutParams.apply {
                 width = addIconSize
@@ -107,7 +107,7 @@ class EditFavoritesScreen(
             indexOfRow = { favoritesContainer.indexOfChild(row) - 1 },
             onDrop = { from, to ->
                 favorites.add(to, favorites.removeAt(from))
-                LauncherConfig.saveFavorites(activity, favorites)
+                LauncherConfig.favorites.set(activity, favorites)
             },
             onChanged = ::populate,
         ).attach(row.findViewById(R.id.favorite_handle))
@@ -127,14 +127,14 @@ class EditFavoritesScreen(
 
     private fun clearFavorites() {
         favorites.clear()
-        LauncherConfig.saveFavorites(activity, favorites)
+        LauncherConfig.favorites.set(activity, favorites)
         populate()
     }
 
     private fun restoreDefaults() {
         favorites.clear()
-        favorites.addAll(LauncherConfig.defaultFavorites(activity))
-        LauncherConfig.saveFavorites(activity, favorites)
+        favorites.addAll(LauncherConfig.favorites.defaultValue(activity))
+        LauncherConfig.favorites.set(activity, favorites)
         populate()
     }
 
@@ -144,7 +144,7 @@ class EditFavoritesScreen(
             return
         }
         favorites.removeAt(index)
-        LauncherConfig.saveFavorites(activity, favorites)
+        LauncherConfig.favorites.set(activity, favorites)
         populate()
     }
 

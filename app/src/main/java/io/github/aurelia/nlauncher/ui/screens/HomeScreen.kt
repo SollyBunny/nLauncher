@@ -184,7 +184,7 @@ class HomeScreen(
         widgetsContainer.removeAllViews()
         widgetViews.clear()
         val widgetGap = WIDGET_GAP_DP.dpToPx(view.context)
-        for (widget in LauncherConfig.widgets(activity)) {
+        for (widget in LauncherConfig.widgets.get(activity)) {
             val view = WidgetViews.create(activity, widget)
             widgetsContainer.addView(
                 view,
@@ -206,7 +206,7 @@ class HomeScreen(
     }
 
     private fun populateFavorites() {
-        val stored = LauncherConfig.favorites(activity)
+        val stored = LauncherConfig.favorites.get(activity)
         val revision = PackageWatcher.revision
         val appearance = appearanceSetting()
         if (revision == renderedRevision &&
@@ -220,7 +220,11 @@ class HomeScreen(
         renderedAppearance = appearance
 
         favoritesContainer.removeAllViews()
-        val favoritesGap = LauncherConfig.favoritesGapDp(activity).toFloat().dpToPx(view.context)
+        val favoritesGap =
+            LauncherConfig.favoritesGapDp
+                .get(activity)
+                .toFloat()
+                .dpToPx(view.context)
         favorites.forEachIndexed { index, favorite ->
             val row = FavoriteViews.create(activity.layoutInflater, favoritesContainer, favorite, activity)
             // The row's padding is part of its tap target, not of the space between
@@ -247,12 +251,12 @@ class HomeScreen(
     /** Everything the rows draw with, as one comparable value. */
     private fun appearanceSetting(): String =
         listOf(
-            LauncherConfig.iconsShown(activity),
-            LauncherConfig.iconPack(activity),
-            LauncherConfig.labelTextSp(activity),
-            LauncherConfig.iconSizeSp(activity),
-            LauncherConfig.textColor(activity),
-            LauncherConfig.favoritesGapDp(activity),
+            LauncherConfig.iconsShown.get(activity),
+            LauncherConfig.iconPack.get(activity),
+            LauncherConfig.labelTextSp.get(activity),
+            LauncherConfig.iconSizeSp.get(activity),
+            LauncherConfig.textColor.get(activity),
+            LauncherConfig.favoritesGapDp.get(activity),
         ).joinToString("/")
 
     private fun trigger(gesture: Gesture) {

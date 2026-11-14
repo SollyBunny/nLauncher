@@ -120,7 +120,7 @@ object Icons {
         // asked for the icon has gone.
         val resources = context.applicationContext.resources
         try {
-            val iconPack = LauncherConfig.iconPack(context)
+            val iconPack = LauncherConfig.iconPack.get(context)
             val startGeneration = generation
             this.loader.execute {
                 // Update iconPackQuery

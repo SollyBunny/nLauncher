@@ -27,26 +27,26 @@ object WidgetViews {
 
     private fun createClockView(activity: LauncherActivity) =
         TextView(activity).apply {
-            setTextColor(LauncherConfig.textColor(activity))
+            setTextColor(LauncherConfig.textColor.get(activity))
             setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-            textSize = LauncherConfig.labelTextSp(activity) * 2.5f
+            textSize = LauncherConfig.labelTextSp.get(activity) * 2.5f
             typeface = Typeface.DEFAULT_BOLD
             setOnClickListener { appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)) }
         }
 
     private fun createDateView(activity: LauncherActivity) =
         TextView(activity).apply {
-            setTextColor(LauncherConfig.textColor(activity))
+            setTextColor(LauncherConfig.textColor.get(activity))
             setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-            textSize = LauncherConfig.labelTextSp(activity)
+            textSize = LauncherConfig.labelTextSp.get(activity)
             setOnClickListener { appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)) }
         }
 
     private fun createAlarmView(activity: LauncherActivity) =
         TextView(activity).apply {
-            setTextColor(LauncherConfig.textColor(activity))
+            setTextColor(LauncherConfig.textColor.get(activity))
             setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-            textSize = LauncherConfig.labelTextSp(activity)
+            textSize = LauncherConfig.labelTextSp.get(activity)
 
             setCompoundDrawablesRelativeWithIntrinsicBounds(
                 R.drawable.ic_alarm,

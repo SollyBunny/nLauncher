@@ -27,11 +27,11 @@ object FavoriteViews {
         // row that has since been rebuilt for another app.
         view.tag = favorite.key
         view.text = Favorites.label(context, favorite)
-        view.textSize = LauncherConfig.labelTextSp(context)
-        view.setTextColor(LauncherConfig.textColor(context))
+        view.textSize = LauncherConfig.labelTextSp.get(context)
+        view.setTextColor(LauncherConfig.textColor.get(context))
 
-        val iconsShown = LauncherConfig.iconsShown(context)
-        val size = LauncherConfig.iconSizeSp(context).spToPx(context)
+        val iconsShown = LauncherConfig.iconsShown.get(context)
+        val size = LauncherConfig.iconSizeSp.get(context).spToPx(context)
 
         // Keep the icon slot occupied even while the icon is unavailable.
         val placeholder = ColorDrawable(Color.TRANSPARENT)

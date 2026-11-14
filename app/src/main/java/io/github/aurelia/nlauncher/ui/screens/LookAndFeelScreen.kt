@@ -12,6 +12,8 @@ import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.SettingFloat
+import io.github.aurelia.nlauncher.SettingInt
 import io.github.aurelia.nlauncher.ui.Screen
 import java.util.Locale
 
@@ -37,70 +39,62 @@ class LookAndFeelScreen(
 
     private fun rebuild() {
         rows.removeAllViews()
-        rows.addView(
-            sizeRow(
-                R.string.text_size,
-                TEXT_SIZE_MIN,
-                TEXT_SIZE_MAX,
-                TEXT_SIZE_STEP,
-                LauncherConfig.labelTextSp(activity),
-                LauncherConfig.DEFAULT_LABEL_TEXT_SP,
-            ) { LauncherConfig.saveLabelTextSp(activity, it) },
-        )
+        rows.addView(sizeRow(R.string.text_size, LauncherConfig.labelTextSp))
         rows.addView(
             settingRow(
                 R.string.text_color,
                 textColorSummary(),
-                LauncherConfig.textColor(activity),
+                LauncherConfig.textColor.get(activity),
             ) { chooseTextColor() },
         )
-        rows.addView(
-            sizeRow(
-                R.string.icon_size,
-                ICON_SIZE_MIN,
-                ICON_SIZE_MAX,
-                ICON_SIZE_STEP,
-                LauncherConfig.iconSizeSp(activity),
-                LauncherConfig.DEFAULT_ICON_SIZE_SP,
-            ) { LauncherConfig.saveIconSizeSp(activity, it) },
-        )
-        rows.addView(
-            sizeRow(
-                R.string.favorites_gap,
-                GAP_MIN,
-                GAP_MAX,
-                GAP_STEP,
-                LauncherConfig.favoritesGapDp(activity).toFloat(),
-                LauncherConfig.DEFAULT_FAVORITES_GAP_DP.toFloat(),
-                valueRes = R.string.size_dp,
-            ) { LauncherConfig.saveFavoritesGapDp(activity, it.toInt()) },
-        )
-        rows.addView(
-            sizeRow(
-                R.string.search_gap,
-                GAP_MIN,
-                GAP_MAX,
-                GAP_STEP,
-                LauncherConfig.searchGapDp(activity).toFloat(),
-                LauncherConfig.DEFAULT_SEARCH_GAP_DP.toFloat(),
-                valueRes = R.string.size_dp,
-            ) { LauncherConfig.saveSearchGapDp(activity, it.toInt()) },
-        )
+        rows.addView(sizeRow(R.string.icon_size, LauncherConfig.iconSizeSp))
+        rows.addView(sizeRow(R.string.favorites_gap, LauncherConfig.favoritesGapDp, valueRes = R.string.size_dp))
+        rows.addView(sizeRow(R.string.search_gap, LauncherConfig.searchGapDp, valueRes = R.string.size_dp))
         rows.addView(settingRow(R.string.icon_pack, iconPackSummary()) { chooseIconPack() })
     }
 
     private fun textColorSummary(): String {
-        val color = LauncherConfig.textColor(activity)
+        val color = LauncherConfig.textColor.get(activity)
         return String.format(Locale.ROOT, "#%06X", color and 0xFFFFFF)
     }
 
-    /**
-     * A size setting: its name and current value on the left, a slider on the right
-     * that steps through [min]..[max] by [step], so every size the old radio lists
-     * offered is still reachable. Changes are saved as the slider moves, and a reset
-     * button appears once the value is no longer [default].
-     */
+    /** A size stored as a float, in sp. */
     private fun sizeRow(
+        titleRes: Int,
+        setting: SettingFloat,
+    ): View =
+        sliderRow(
+            titleRes = titleRes,
+            min = setting.min.toInt(),
+            max = setting.max.toInt(),
+            step = setting.step.toInt(),
+            current = setting.get(activity),
+            default = setting.defaultValue(activity),
+        ) { setting.set(activity, it) }
+
+    /** A spacing stored as an int, in dp. */
+    private fun sizeRow(
+        titleRes: Int,
+        setting: SettingInt,
+        valueRes: Int,
+    ): View =
+        sliderRow(
+            titleRes = titleRes,
+            min = setting.min,
+            max = setting.max,
+            step = setting.step,
+            current = setting.get(activity).toFloat(),
+            default = setting.defaultValue(activity).toFloat(),
+            valueRes = valueRes,
+        ) { setting.set(activity, it.toInt()) }
+
+    /**
+     * A size setting's row: its name and current value on the left, a slider on the
+     * right that steps through [min]..[max] by [step], so every size the old radio
+     * lists offered is still reachable. Changes are saved as the slider moves, and a
+     * reset button appears once the value is no longer [default].
+     */
+    private fun sliderRow(
         titleRes: Int,
         min: Int,
         max: Int,
@@ -152,8 +146,8 @@ class LookAndFeelScreen(
     }
 
     private fun chooseTextColor() {
-        showColorPicker(activity, LauncherConfig.textColor(activity)) { color ->
-            LauncherConfig.saveTextColor(activity, color)
+        showColorPicker(activity, LauncherConfig.textColor.get(activity)) { color ->
+            LauncherConfig.textColor.set(activity, color)
             rebuild()
         }
     }
@@ -177,10 +171,10 @@ class LookAndFeelScreen(
 
     private fun iconPackSummary(): String =
         when {
-            !LauncherConfig.iconsShown(activity) -> activity.getString(R.string.icon_pack_disabled)
-            LauncherConfig.iconPack(activity) == null -> activity.getString(R.string.icon_pack_default)
+            !LauncherConfig.iconsShown.get(activity) -> activity.getString(R.string.icon_pack_disabled)
+            LauncherConfig.iconPack.get(activity) == null -> activity.getString(R.string.icon_pack_default)
             else -> {
-                val packageName = LauncherConfig.iconPack(activity)
+                val packageName = LauncherConfig.iconPack.get(activity)
                 val label =
                     IconPacks
                         .installed(activity)
@@ -240,8 +234,8 @@ class LookAndFeelScreen(
         pack: String?,
         shown: Boolean,
     ) {
-        LauncherConfig.saveIconsShown(activity, shown)
-        LauncherConfig.saveIconPack(activity, pack)
+        LauncherConfig.iconsShown.set(activity, shown)
+        LauncherConfig.iconPack.set(activity, pack)
         // Every icon on screen came from the old setting, so the cache has to go: what
         // is left behind would keep the launcher showing what was just replaced.
         Icons.clear()
@@ -250,20 +244,5 @@ class LookAndFeelScreen(
 
     companion object {
         const val KEY = "look_and_feel"
-
-        /** The range the text size slider covers, in sp. */
-        private const val TEXT_SIZE_MIN = 12
-        private const val TEXT_SIZE_MAX = 32
-        private const val TEXT_SIZE_STEP = 2
-
-        /** The range the icon size slider covers, in sp. The default is among them. */
-        private const val ICON_SIZE_MIN = 24
-        private const val ICON_SIZE_MAX = 96
-        private const val ICON_SIZE_STEP = 8
-
-        /** The range the gap sliders cover, in dp. */
-        private const val GAP_MIN = 2
-        private const val GAP_MAX = 16
-        private const val GAP_STEP = 1
     }
 }

@@ -38,7 +38,7 @@ class EditWidgetsScreen(
 
     override fun onActivated() {
         widgets.clear()
-        widgets.addAll(LauncherConfig.widgets(activity))
+        widgets.addAll(LauncherConfig.widgets.get(activity))
         populate()
     }
 
@@ -60,8 +60,8 @@ class EditWidgetsScreen(
         // Its + icon matches the widgets' handle size so the row lines up.
         val addLabel = add.findViewById<TextView>(R.id.add_widget_label)
         val addIcon = add.findViewById<ImageView>(R.id.add_widget_icon)
-        addLabel.textSize = LauncherConfig.labelTextSp(activity)
-        val addIconSize = LauncherConfig.iconSizeSp(activity).spToPx(activity)
+        addLabel.textSize = LauncherConfig.labelTextSp.get(activity)
+        val addIconSize = LauncherConfig.iconSizeSp.get(activity).spToPx(activity)
         addIcon.layoutParams =
             addIcon.layoutParams.apply {
                 width = addIconSize
@@ -111,7 +111,7 @@ class EditWidgetsScreen(
             indexOfRow = { widgetsContainer.indexOfChild(row) },
             onDrop = { from, to ->
                 widgets.add(to, widgets.removeAt(from))
-                LauncherConfig.saveWidgets(activity, widgets)
+                LauncherConfig.widgets.set(activity, widgets)
             },
             onChanged = ::populate,
         ).attach(row.findViewById(R.id.widget_handle))
@@ -122,7 +122,7 @@ class EditWidgetsScreen(
     /** Add a widget to the end of the list and save the new order. */
     private fun addWidget(widget: Widget) {
         widgets.add(widget)
-        LauncherConfig.saveWidgets(activity, widgets)
+        LauncherConfig.widgets.set(activity, widgets)
         populate()
     }
 
@@ -132,7 +132,7 @@ class EditWidgetsScreen(
             return
         }
         widgets.removeAt(index)
-        LauncherConfig.saveWidgets(activity, widgets)
+        LauncherConfig.widgets.set(activity, widgets)
         populate()
     }
 
