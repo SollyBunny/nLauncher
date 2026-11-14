@@ -220,14 +220,27 @@ class HomeScreen(
         renderedAppearance = appearance
 
         favoritesContainer.removeAllViews()
-        for (favorite in favorites) {
+        val favoritesGap = LauncherConfig.favoritesGapDp(activity).toFloat().dpToPx(view.context)
+        favorites.forEachIndexed { index, favorite ->
             val row = FavoriteViews.create(activity.layoutInflater, favoritesContainer, favorite, activity)
+            // The row's padding is part of its tap target, not of the space between
+            // apps: drop the vertical half so the configured gap is all there is.
+            row.setPadding(row.paddingLeft, 0, row.paddingRight, 0)
             row.setOnClickListener { activity.launch(favorite.intent) }
             row.setOnLongClickListener {
                 activity.pushEditFavorites()
                 true
             }
-            favoritesContainer.addView(row)
+            favoritesContainer.addView(
+                row,
+                LinearLayout
+                    .LayoutParams(
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT,
+                    ).apply {
+                        topMargin = if (index == 0) 0 else favoritesGap
+                    },
+            )
         }
     }
 
@@ -239,6 +252,7 @@ class HomeScreen(
             LauncherConfig.labelTextSp(activity),
             LauncherConfig.iconSizeSp(activity),
             LauncherConfig.textColor(activity),
+            LauncherConfig.favoritesGapDp(activity),
         ).joinToString("/")
 
     private fun trigger(gesture: Gesture) {

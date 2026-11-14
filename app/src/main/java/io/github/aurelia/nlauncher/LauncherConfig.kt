@@ -95,12 +95,20 @@ object LauncherConfig {
     private const val KEY_LABEL_TEXT_SP = "label_text_sp"
     private const val KEY_TEXT_COLOR = "text_color"
     private const val KEY_ICON_SIZE_SP = "icon_size_sp"
+    private const val KEY_FAVORITES_GAP_DP = "favorites_gap_dp"
+    private const val KEY_SEARCH_GAP_DP = "search_gap_dp"
 
     /** The size app labels start at, in sp, before the user picks another. */
     const val DEFAULT_LABEL_TEXT_SP = 18f
 
     /** The size app icons start at, in sp, before the user picks another. */
     const val DEFAULT_ICON_SIZE_SP = 40f
+
+    /** The space between favorite apps, in dp, before the user picks another. */
+    const val DEFAULT_FAVORITES_GAP_DP = 12
+
+    /** The space between apps in the search menu, in dp, before the user picks another. */
+    const val DEFAULT_SEARCH_GAP_DP = 8
 
     // Parsing a stored favorite means an Intent.parseUri per entry, and the launcher
     // asks for them on every Home press, so the parsed list is kept against the exact
@@ -241,6 +249,26 @@ object LauncherConfig {
         sp: Float,
     ) {
         prefs(context).edit().putFloat(KEY_ICON_SIZE_SP, sp).apply()
+    }
+
+    /** The space between favorite apps on the home screen, in dp. */
+    fun favoritesGapDp(context: Context): Int = prefs(context).getInt(KEY_FAVORITES_GAP_DP, DEFAULT_FAVORITES_GAP_DP)
+
+    fun saveFavoritesGapDp(
+        context: Context,
+        dp: Int,
+    ) {
+        prefs(context).edit().putInt(KEY_FAVORITES_GAP_DP, dp).apply()
+    }
+
+    /** The space between the apps listed in the search menu, in dp. */
+    fun searchGapDp(context: Context): Int = prefs(context).getInt(KEY_SEARCH_GAP_DP, DEFAULT_SEARCH_GAP_DP)
+
+    fun saveSearchGapDp(
+        context: Context,
+        dp: Int,
+    ) {
+        prefs(context).edit().putInt(KEY_SEARCH_GAP_DP, dp).apply()
     }
 
     fun gestureActions(context: Context): Map<Gesture, GestureAction> = Gesture.entries.associateWith { gestureAction(context, it) }

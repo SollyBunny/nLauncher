@@ -19,7 +19,10 @@
     <string name="text_size">Text size</string>
     <string name="text_color">Text color</string>
     <string name="icon_size">Icon size</string>
+    <string name="favorites_gap">Favorite apps gap</string>
+    <string name="search_gap">Search menu gap</string>
     <string name="size_sp">%1$d sp</string>
+    <string name="size_dp">%1$d dp</string>
     <string name="reset_to_default">Reset to default</string>
 
     <string name="color_hue">Hue</string>

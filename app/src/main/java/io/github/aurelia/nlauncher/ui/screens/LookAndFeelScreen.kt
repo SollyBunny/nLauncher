@@ -64,6 +64,28 @@ class LookAndFeelScreen(
                 LauncherConfig.DEFAULT_ICON_SIZE_SP,
             ) { LauncherConfig.saveIconSizeSp(activity, it) },
         )
+        rows.addView(
+            sizeRow(
+                R.string.favorites_gap,
+                GAP_MIN,
+                GAP_MAX,
+                GAP_STEP,
+                LauncherConfig.favoritesGapDp(activity).toFloat(),
+                LauncherConfig.DEFAULT_FAVORITES_GAP_DP.toFloat(),
+                valueRes = R.string.size_dp,
+            ) { LauncherConfig.saveFavoritesGapDp(activity, it.toInt()) },
+        )
+        rows.addView(
+            sizeRow(
+                R.string.search_gap,
+                GAP_MIN,
+                GAP_MAX,
+                GAP_STEP,
+                LauncherConfig.searchGapDp(activity).toFloat(),
+                LauncherConfig.DEFAULT_SEARCH_GAP_DP.toFloat(),
+                valueRes = R.string.size_dp,
+            ) { LauncherConfig.saveSearchGapDp(activity, it.toInt()) },
+        )
         rows.addView(settingRow(R.string.icon_pack, iconPackSummary()) { chooseIconPack() })
     }
 
@@ -85,6 +107,7 @@ class LookAndFeelScreen(
         step: Int,
         current: Float,
         default: Float,
+        valueRes: Int = R.string.size_sp,
         save: (Float) -> Unit,
     ): View {
         val row = activity.layoutInflater.inflate(R.layout.item_size_setting, rows, false)
@@ -100,9 +123,9 @@ class LookAndFeelScreen(
             }
 
         fun showValue(progress: Int) {
-            val sp = min + progress * step
-            value.text = activity.getString(R.string.size_sp, sp)
-            reset.visibility = if (sp.toFloat() == default) View.GONE else View.VISIBLE
+            val amount = min + progress * step
+            value.text = activity.getString(valueRes, amount)
+            reset.visibility = if (amount.toFloat() == default) View.GONE else View.VISIBLE
         }
 
         showValue(seekBar.progress)
@@ -237,5 +260,10 @@ class LookAndFeelScreen(
         private const val ICON_SIZE_MIN = 24
         private const val ICON_SIZE_MAX = 96
         private const val ICON_SIZE_STEP = 8
+
+        /** The range the gap sliders cover, in dp. */
+        private const val GAP_MIN = 2
+        private const val GAP_MAX = 16
+        private const val GAP_STEP = 1
     }
 }

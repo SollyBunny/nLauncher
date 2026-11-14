@@ -155,6 +155,11 @@ class SearchScreen(
         recentCellIcon.setTint(if (recentHighlighted) textColor else fadedColor)
     }
 
+    /** Keep the row spacing in step with the configured density, even on a reused list. */
+    private fun applySearchGap() {
+        listView?.dividerHeight = LauncherConfig.searchGapDp(activity).toFloat().dpToPx(activity)
+    }
+
     /** [color] with its own alpha scaled by [factor]. */
     private fun faded(
         color: Int,
@@ -198,6 +203,7 @@ class SearchScreen(
         applySearchBarAppearance()
         applyLetterBarAppearance()
         show()
+        applySearchGap()
         // Every visit starts a fresh search. The input does not depend on the app
         // list, so it is set up even while a very fast first open is still waiting
         // for the list to arrive.
@@ -238,8 +244,10 @@ class SearchScreen(
             )
         adapter = rows
         val results = ListView(activity)
-        results.divider = null
-        results.dividerHeight = 0
+        // A transparent divider is the gap between rows: the rows themselves carry no
+        // vertical padding, so a gap of 0 would leave them touching.
+        results.divider = ColorDrawable(Color.TRANSPARENT)
+        results.dividerHeight = LauncherConfig.searchGapDp(activity).toFloat().dpToPx(activity)
         results.adapter = rows
         listView = results
 
