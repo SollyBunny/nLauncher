@@ -3,6 +3,7 @@
 
     <string name="back">Back</string>
     <string name="done">Done</string>
+    <string name="dialog_are_you_sure">Are you sure?</string>
 
     <string name="launch_activity_not_found_exception">No activity to handle %1$s</string>
     <string name="launch_security_exception">Not allowed to launch %1$s</string>
@@ -42,6 +43,9 @@
 
     <!-- Favorites edit -->
     <string name="edit_favorites">Edit favorites</string>
+    <string name="clear">Clear</string>
+    <string name="defaults">Defaults</string>
+    <string name="clear_favorites_confirmation">All favorite apps will be removed.</string>
     <string name="add_favorite">Add favorite</string>
     <string name="move_app">Move</string>
     <string name="remove_app">Remove</string>

@@ -1,5 +1,6 @@
 package io.github.aurelia.nlauncher.ui.screens
 
+import android.app.AlertDialog
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -25,10 +26,15 @@ class EditFavoritesScreen(
 
     private val favoritesContainer: LinearLayout = view.findViewById(R.id.edit_favorites)
 
+    private val clearOrDefaults: TextView = view.findViewById(R.id.edit_clear)
+
     private val favorites = mutableListOf<FavoriteApp>()
 
     init {
         view.findViewById<View>(R.id.edit_done).setOnClickListener { activity.back() }
+        clearOrDefaults.setOnClickListener {
+            if (favorites.isEmpty()) restoreDefaults() else confirmClearFavorites()
+        }
         // Keep the rows clear of the navigation bar and the title bar below the
         // status bar (the bar's own padding comes from the layout).
         view.padForSystemBars()
@@ -51,6 +57,8 @@ class EditFavoritesScreen(
         favoritesContainer.removeAllViews()
         addAddRow()
         favorites.forEachIndexed { index, favorite -> addEditableRow(index, favorite) }
+        // With nothing left to clear, offer the original favorites instead.
+        clearOrDefaults.setText(if (favorites.isEmpty()) R.string.defaults else R.string.clear)
     }
 
     private fun addAddRow() {
@@ -105,6 +113,29 @@ class EditFavoritesScreen(
         ).attach(row.findViewById(R.id.favorite_handle))
 
         favoritesContainer.addView(row)
+    }
+
+    private fun confirmClearFavorites() {
+        AlertDialog
+            .Builder(activity)
+            .setTitle(R.string.dialog_are_you_sure)
+            .setMessage(R.string.clear_favorites_confirmation)
+            .setPositiveButton(R.string.clear) { _, _ -> clearFavorites() }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+    }
+
+    private fun clearFavorites() {
+        favorites.clear()
+        LauncherConfig.saveFavorites(activity, favorites)
+        populate()
+    }
+
+    private fun restoreDefaults() {
+        favorites.clear()
+        favorites.addAll(LauncherConfig.defaultFavorites(activity))
+        LauncherConfig.saveFavorites(activity, favorites)
+        populate()
     }
 
     private fun removeFavorite(index: Int) {

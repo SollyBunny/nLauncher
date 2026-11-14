@@ -144,7 +144,8 @@ object LauncherConfig {
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    private fun defaultFavorites(context: Context) =
+    /** The favorites a fresh install starts with, resolved to the apps that handle them. */
+    fun defaultFavorites(context: Context) =
         listOf(
             Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
                 type = "*/*"
