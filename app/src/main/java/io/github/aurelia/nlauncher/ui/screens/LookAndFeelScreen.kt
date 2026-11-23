@@ -5,7 +5,6 @@ import android.view.View
 import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.ImageView
-import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import io.github.aurelia.nlauncher.IconPacks
@@ -16,7 +15,7 @@ import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.SettingFloat
 import io.github.aurelia.nlauncher.SettingInt
 import io.github.aurelia.nlauncher.ui.Screen
-import java.util.Locale
+import io.github.aurelia.nlauncher.ui.colorToHex
 
 class LookAndFeelScreen(
     private val activity: LauncherActivity,
@@ -25,7 +24,7 @@ class LookAndFeelScreen(
 
     override val view: View = activity.layoutInflater.inflate(R.layout.screen_settings, null, false)
 
-    private val rows = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+    private val rows = settingsList(activity)
 
     init {
         setHeader(activity, view, R.string.menu_look_and_feel, showBack = true)
@@ -41,12 +40,9 @@ class LookAndFeelScreen(
     private fun rebuild() {
         rows.removeAllViews()
         rows.addView(sizeRow(R.string.text_size, LauncherConfig.labelTextSp))
+        val textColor = LauncherConfig.textColor.get(activity)
         rows.addView(
-            settingRow(
-                R.string.text_color,
-                textColorSummary(),
-                LauncherConfig.textColor.get(activity),
-            ) { chooseTextColor() },
+            settingRow(activity, rows, R.string.text_color, colorToHex(textColor), textColor) { chooseTextColor() },
         )
         rows.addView(sizeRow(R.string.icon_size, LauncherConfig.iconSizeSp))
         rows.addView(sizeRow(R.string.favorites_gap, LauncherConfig.favoritesGapDp, valueRes = R.string.size_dp))
@@ -56,12 +52,7 @@ class LookAndFeelScreen(
                 LauncherConfig.alignToBottom.set(activity, enabled)
             },
         )
-        rows.addView(settingRow(R.string.icon_pack, iconPackSummary()) { chooseIconPack() })
-    }
-
-    private fun textColorSummary(): String {
-        val color = LauncherConfig.textColor.get(activity)
-        return String.format(Locale.ROOT, "#%06X", color and 0xFFFFFF)
+        rows.addView(settingRow(activity, rows, R.string.icon_pack, iconPackSummary()) { chooseIconPack() })
     }
 
     /** A size stored as a float, in sp. */
@@ -176,29 +167,11 @@ class LookAndFeelScreen(
         }
     }
 
-    /** A row naming a setting, with its current value after it. */
-    private fun settingRow(
-        titleRes: Int,
-        summary: String,
-        valueColor: Int? = null,
-        onClick: () -> Unit,
-    ): View {
-        val row = activity.layoutInflater.inflate(R.layout.item_gesture, rows, false)
-        row.findViewById<TextView>(R.id.gesture_name).setText(titleRes)
-        row.findViewById<TextView>(R.id.gesture_action).apply {
-            text = summary
-            if (valueColor != null) setTextColor(valueColor)
-        }
-        row.setOnClickListener { onClick() }
-        return row
-    }
-
-    private fun iconPackSummary(): String =
-        when {
-            !LauncherConfig.iconsShown.get(activity) -> activity.getString(R.string.icon_pack_disabled)
-            LauncherConfig.iconPack.get(activity) == null -> activity.getString(R.string.icon_pack_default)
+    private fun iconPackSummary(): String {
+        if (!LauncherConfig.iconsShown.get(activity)) return activity.getString(R.string.icon_pack_disabled)
+        return when (val packageName = LauncherConfig.iconPack.get(activity)) {
+            null -> activity.getString(R.string.icon_pack_default)
             else -> {
-                val packageName = LauncherConfig.iconPack.get(activity)
                 val label =
                     IconPacks
                         .installed(activity)
@@ -207,6 +180,7 @@ class LookAndFeelScreen(
                 activity.getString(R.string.icon_pack_custom_set, label)
             }
         }
+    }
 
     /**
      * Default (the icons the apps ship with), Custom (an icon pack, picked from the

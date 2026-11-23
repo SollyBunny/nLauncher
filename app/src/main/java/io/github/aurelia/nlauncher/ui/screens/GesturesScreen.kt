@@ -3,8 +3,6 @@ package io.github.aurelia.nlauncher.ui.screens
 import android.app.AlertDialog
 import android.view.View
 import android.widget.FrameLayout
-import android.widget.LinearLayout
-import android.widget.TextView
 import io.github.aurelia.nlauncher.FavoriteApp
 import io.github.aurelia.nlauncher.Favorites
 import io.github.aurelia.nlauncher.Gesture
@@ -21,7 +19,7 @@ class GesturesScreen(
 
     override val view: View = activity.layoutInflater.inflate(R.layout.screen_settings, null, false)
 
-    private val gesturesList = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
+    private val gesturesList = settingsList(activity)
 
     init {
         // A screen below the settings menu, so it gets the back arrow rather than the
@@ -47,12 +45,14 @@ class GesturesScreen(
     private fun rebuildGestureRows() {
         gesturesList.removeAllViews()
         for (gesture in Gesture.entries) {
-            val row = activity.layoutInflater.inflate(R.layout.item_gesture, gesturesList, false)
-            row.findViewById<TextView>(R.id.gesture_name).setText(gesture.label())
-            row.findViewById<TextView>(R.id.gesture_action).text =
-                actionSummary(LauncherConfig.gestureAction(activity, gesture))
-            row.setOnClickListener { chooseAction(gesture) }
-            gesturesList.addView(row)
+            gesturesList.addView(
+                settingRow(
+                    activity,
+                    gesturesList,
+                    gesture.label(),
+                    actionSummary(LauncherConfig.gestureAction(activity, gesture)),
+                ) { chooseAction(gesture) },
+            )
         }
     }
 

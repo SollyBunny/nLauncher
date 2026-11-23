@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- A clickable settings row: title, optional summary, and a chevron. Shared by the
+     menu, the gesture bindings and the look-and-feel settings. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="?android:attr/selectableItemBackground"
+    android:baselineAligned="false"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
@@ -19,14 +22,14 @@
         android:orientation="vertical">
 
         <TextView
-            android:id="@+id/gesture_name"
+            android:id="@+id/row_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textColor="@color/text_primary"
             android:textSize="16sp" />
 
         <TextView
-            android:id="@+id/gesture_action"
+            android:id="@+id/row_summary"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"

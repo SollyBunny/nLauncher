@@ -5,45 +5,35 @@
     stays covered while the user is in the settings.
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/settings_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/settings_background"
     android:orientation="vertical">
 
+    <!-- The icon is its own clickable, ripple-backed view, not a compound drawable. -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal"
+        tools:ignore="UseCompoundDrawables"
         android:paddingStart="8dp"
         android:paddingEnd="8dp"
         android:paddingTop="12dp"
         android:paddingBottom="8dp">
 
-        <!--
-            The two slots below hold one icon at a time: the launcher icon on the
-            settings menu, the back arrow on the screens below it. Both are 40dp with
-            the same padding so the title never moves between them; which one shows is
-            set in code, in setHeader() in SettingsScreen.kt.
-        -->
+        <!-- The launcher icon on the settings menu, or a back arrow on the screens
+             below it; setHeader() swaps the image and click behaviour. -->
         <ImageView
-            android:id="@+id/settings_back"
+            android:id="@+id/settings_icon"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/back"
             android:padding="8dp"
-            android:src="@drawable/ic_arrow_back"
-            android:tint="@color/text_primary" />
-
-        <ImageView
-            android:id="@+id/settings_app_icon"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:importantForAccessibility="no"
-            android:padding="8dp"
-            android:src="@drawable/ic_launcher" />
+            android:src="@drawable/ic_arrow_back" />
 
         <TextView
             android:id="@+id/settings_title"
