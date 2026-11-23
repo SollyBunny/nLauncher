@@ -1,14 +1,6 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!--
-        Plain opaque theme used by the settings screen.
-    -->
-    <style name="Theme.nLauncher" parent="@android:style/Theme.Material.NoActionBar">
-        <item name="android:windowBackground">@color/settings_background</item>
-        <item name="android:colorAccent">@android:color/holo_blue_light</item>
-    </style>
-
-    <!--
         The launcher, and every screen in it: fully transparent so the system wallpaper
         (static or live) shows through, with FLAG_SHOW_WALLPAPER (set in code too) so
         the platform also forwards touch events to the live wallpaper for
@@ -31,6 +23,14 @@
         -->
         <item name="android:windowLayoutInDisplayCutoutMode" tools:targetApi="o_mr1">shortEdges</item>
         <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
+    <!-- The drop shadow shared by every label over the wallpaper. -->
+    <style name="ShadowText">
+        <item name="android:shadowColor">@color/text_shadow</item>
+        <item name="android:shadowDx">1</item>
+        <item name="android:shadowDy">1</item>
+        <item name="android:shadowRadius">3</item>
     </style>
 
 </resources>

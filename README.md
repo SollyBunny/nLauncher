@@ -1,14 +1,14 @@
 # nLauncher
 
-nLauncher is a simple launcher based of its namesake, [mLauncher](https://github.com/CodeWorksCreativeHub/mLauncher).
+nLauncher is a simple launcher based on its namesake, [mLauncher](https://github.com/CodeWorksCreativeHub/mLauncher).
 
 ## Features
 
-* Simple home screen with rearrangable fav apps and widgets
+* Simple home screen with rearrangeable fav apps and widgets
 * Gestures, basic theme customization
 * Support for icon packs
 * Search sorts by recently opened apps
-* Lightweight as possible
+* As lightweight as possible
 
 ## Improvements over [mLauncher](https://github.com/CodeWorksCreativeHub/mLauncher).
 

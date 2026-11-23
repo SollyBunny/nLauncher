@@ -8,8 +8,6 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -27,14 +25,18 @@ import io.github.aurelia.nlauncher.AppCatalog
 import io.github.aurelia.nlauncher.AppCatalogWatcher
 import io.github.aurelia.nlauncher.AppEntry
 import io.github.aurelia.nlauncher.AppUsage
-import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.IconPosition
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.ShadowedIconDrawable
+import io.github.aurelia.nlauncher.ui.SimpleTextWatcher
+import io.github.aurelia.nlauncher.ui.bindAppIcon
+import io.github.aurelia.nlauncher.ui.clearAppIcon
 import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import io.github.aurelia.nlauncher.ui.setLauncherShadow
 import io.github.aurelia.nlauncher.ui.spToPx
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -112,7 +114,7 @@ class SearchScreen(
         val textSp = LauncherConfig.labelTextSp.get(activity)
         searchInput.textSize = textSp
         searchInput.setHintTextColor(faded(textColor, FADED_ALPHA))
-        searchInput.setShadowLayer(3f, 1f, 1f, SHADOW_COLOR)
+        searchInput.setLauncherShadow()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // The Editor caches the cursor drawable the first time it draws it, so a
             // newly set drawable would never be picked up. Keep one instance and only
@@ -251,13 +253,9 @@ class SearchScreen(
         // A transparent divider is the gap between rows: the rows themselves carry no
         // vertical padding, so a gap of 0 would leave them touching.
         results.divider = ColorDrawable(Color.TRANSPARENT)
-        results.dividerHeight =
-            LauncherConfig.searchGapDp
-                .get(activity)
-                .toFloat()
-                .dpToPx(activity)
         results.adapter = rows
         listView = results
+        applySearchGap()
 
         // A-Z index on the left, results filling all the remaining width so the
         // app list gets as much room as the screen can spare.
@@ -288,14 +286,7 @@ class SearchScreen(
         highlightVisibleLetter()
 
         searchInput.addTextChangedListener(
-            object : TextWatcher {
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int,
-                ) {}
-
+            object : SimpleTextWatcher {
                 override fun onTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -308,8 +299,6 @@ class SearchScreen(
                     updateLetters()
                     highlightVisibleLetter()
                 }
-
-                override fun afterTextChanged(s: Editable?) {}
             },
         )
 
@@ -368,7 +357,7 @@ class SearchScreen(
             cellView.text = letter.uppercaseChar().toString()
             cellView.textSize = labelSp
             cellView.gravity = Gravity.CENTER
-            cellView.setShadowLayer(3f, 1f, 1f, SHADOW_COLOR)
+            cellView.setLauncherShadow()
             cellView.setTextColor(unselected)
             cellView.setOnClickListener { jumpTo(letter) }
             cellView.visibility = View.GONE
@@ -537,30 +526,10 @@ class SearchScreen(
             view.setTextColor(LauncherConfig.textColor.get(activity))
 
             // Configure the compound drawable.
-            val iconsShown = LauncherConfig.iconsShown.get(activity)
-            val size = LauncherConfig.iconSizeSp.get(activity).spToPx(activity)
-
-            if (iconsShown) {
-                // Empty icon
-                val placeholder =
-                    android.graphics.drawable.ColorDrawable(
-                        android.graphics.Color.TRANSPARENT,
-                    )
-
-                fun setIcon(drawable: Drawable?) {
-                    if (view.tag != entry.key) return
-                    val icon = ShadowedIconDrawable.wrap(drawable) ?: placeholder
-                    icon.setBounds(0, 0, size, size)
-                    view.setCompoundDrawablesRelative(null, null, icon, null)
-                }
-
-                setIcon(
-                    Icons.icon(activity, entry.intent) { loaded ->
-                        setIcon(loaded)
-                    },
-                )
+            if (LauncherConfig.iconsShown.get(activity)) {
+                view.bindAppIcon(entry.intent, IconPosition.END)
             } else {
-                view.setCompoundDrawablesRelative(null, null, null, null)
+                view.clearAppIcon()
             }
 
             view.setOnClickListener {
@@ -582,9 +551,6 @@ class SearchScreen(
 
         /** Search icon size in dp at the default text size; it scales with the text size. */
         private const val SEARCH_ICON_DP = 24f
-
-        /** The shadow the launcher's text carries, reused for the search icon. */
-        private const val SHADOW_COLOR = 0x99000000.toInt()
 
         /** How much of the text color's alpha muted text keeps: the hint and the index. */
         private const val FADED_ALPHA = 0.8f

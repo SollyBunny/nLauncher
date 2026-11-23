@@ -1,6 +1,5 @@
 package io.github.aurelia.nlauncher.ui
 
-import android.annotation.TargetApi
 import android.content.res.ColorStateList
 import android.content.res.Resources
 import android.graphics.Bitmap
@@ -16,7 +15,6 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.os.Build
 import android.util.AttributeSet
 import android.util.Xml
 import org.xmlpull.v1.XmlPullParser
@@ -74,8 +72,8 @@ class ShadowedIconDrawable private constructor(
         val source: Drawable?
         val inflatedTint: ColorStateList?
         try {
-            source = a.getDrawable(0)
-            inflatedTint = a.getColorStateList(1)
+            source = a.getDrawable(SOURCE_ATTR_SRC)
+            inflatedTint = a.getColorStateList(SOURCE_ATTR_TINT)
         } finally {
             a.recycle()
         }
@@ -139,7 +137,7 @@ class ShadowedIconDrawable private constructor(
     ): Bitmap {
         shadowBitmap?.let { if (width == shadowWidth && height == shadowHeight) return it }
 
-        val pad = (SHADOW_BLUR_SIGMA * 3).roundToInt()
+        val pad = SHADOW_PAD_PX
         val sharp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val previousAlpha = icon.alpha
         val previousFilter = icon.colorFilter
@@ -251,13 +249,14 @@ class ShadowedIconDrawable private constructor(
     }
 
     // https://stackoverflow.com/questions/65402823/deprecation-of-drawable-getopacity
-    @Suppress("OVERRIDE_DEPRECATION")
-    @TargetApi(Build.VERSION_CODES.Q)
+    // Always safe to answer TRANSLUCENT; this is not a Q-only method, so @TargetApi's
+    // caller-facing requirement was misleading (and lint warns about it).
+    @Suppress("OVERRIDE_DEPRECATION", "UseRequiresApi")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 
     companion object {
         const val SHADOW_OFFSET = 1f
-        const val SHADOW_COLOR = 0x99000000.toInt()
+        const val SHADOW_COLOR = TEXT_SHADOW_COLOR
 
         /**
          * The text's `setShadowLayer` radius. BlurMaskFilter takes a sigma, not a
@@ -266,11 +265,15 @@ class ShadowedIconDrawable private constructor(
         private const val SHADOW_BLUR_RADIUS = 3f
         private const val SHADOW_BLUR_SIGMA = SHADOW_BLUR_RADIUS * 0.57735f + 0.5f
 
+        /** Blur room around the icon, in pixels. */
+        private val SHADOW_PAD_PX = (SHADOW_BLUR_SIGMA * 3).roundToInt()
+
         /** How far the shadow reaches past the icon's bounds, in pixels. */
-        val SHADOW_EXTENT_PX: Int =
-            (SHADOW_BLUR_SIGMA * 3).roundToInt() + SHADOW_OFFSET.toInt()
+        val SHADOW_EXTENT_PX: Int = SHADOW_PAD_PX + SHADOW_OFFSET.toInt()
 
         /** The XML attributes a wrapper drawable reads: its icon and its tint. */
+        private const val SOURCE_ATTR_SRC = 0
+        private const val SOURCE_ATTR_TINT = 1
         private val SOURCE_ATTRS = intArrayOf(android.R.attr.src, android.R.attr.tint)
 
         /** Wrap [drawable], or return null when there is no icon to shadow. */

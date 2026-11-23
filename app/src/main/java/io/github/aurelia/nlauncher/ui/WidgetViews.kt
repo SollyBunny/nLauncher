@@ -25,40 +25,33 @@ object WidgetViews {
         return DateFormat.getTimeFormat(context).format(Date(next))
     }
 
-    private fun createClockView(activity: LauncherActivity) =
+    /** The clock and date open the Clock app; the alarm action is only how we find it. */
+    private fun launchClockApp(activity: LauncherActivity) {
+        activity.launch(appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)))
+    }
+
+    /** The alarm widget goes to the alarm screen, not the Clock app's home activity. */
+    private fun launchAlarmScreen(activity: LauncherActivity) {
+        activity.launch(Intent(AlarmClock.ACTION_SHOW_ALARMS))
+    }
+
+    private fun createView(
+        activity: LauncherActivity,
+        scale: Float,
+        bold: Boolean = false,
+        alarmIcon: Boolean = false,
+        onClick: (() -> Unit)? = null,
+    ): TextView =
         TextView(activity).apply {
             setTextColor(LauncherConfig.textColor.get(activity))
-            setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-            textSize = LauncherConfig.labelTextSp.get(activity) * 2.5f
-            typeface = Typeface.DEFAULT_BOLD
-            setOnClickListener { appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)) }
-        }
-
-    private fun createDateView(activity: LauncherActivity) =
-        TextView(activity).apply {
-            setTextColor(LauncherConfig.textColor.get(activity))
-            setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-            textSize = LauncherConfig.labelTextSp.get(activity)
-            setOnClickListener { appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)) }
-        }
-
-    private fun createAlarmView(activity: LauncherActivity) =
-        TextView(activity).apply {
-            setTextColor(LauncherConfig.textColor.get(activity))
-            setShadowLayer(3f, 1f, 1f, 0x99000000.toInt())
-            textSize = LauncherConfig.labelTextSp.get(activity)
-
-            setCompoundDrawablesRelativeWithIntrinsicBounds(
-                R.drawable.ic_alarm,
-                0,
-                0,
-                0,
-            )
-            compoundDrawablePadding =
-                (6f * resources.displayMetrics.density).toInt()
-            setOnClickListener {
-                activity.launch(Intent(AlarmClock.ACTION_SHOW_ALARMS))
+            setLauncherShadow()
+            textSize = LauncherConfig.labelTextSp.get(activity) * scale
+            if (bold) typeface = Typeface.DEFAULT_BOLD
+            if (alarmIcon) {
+                setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_alarm, 0, 0, 0)
+                compoundDrawablePadding = (6f * resources.displayMetrics.density).toInt()
             }
+            if (onClick != null) setOnClickListener { onClick() }
         }
 
     fun titleRes(widget: Widget): Int =
@@ -82,9 +75,10 @@ object WidgetViews {
     fun create(
         activity: LauncherActivity,
         widget: Widget,
-    ) = when (widget) {
-        Widget.CLOCK -> createClockView(activity)
-        Widget.DATE -> createDateView(activity)
-        Widget.ALARM -> createAlarmView(activity)
-    }.apply { text = text(activity, widget, Date()) }
+    ): TextView =
+        when (widget) {
+            Widget.CLOCK -> createView(activity, 2.5f, bold = true) { launchClockApp(activity) }
+            Widget.DATE -> createView(activity, 1f) { launchClockApp(activity) }
+            Widget.ALARM -> createView(activity, 1f, alarmIcon = true) { launchAlarmScreen(activity) }
+        }.apply { text = text(activity, widget, Date()) }
 }

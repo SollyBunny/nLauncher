@@ -48,10 +48,10 @@
     <string name="defaults">Defaults</string>
     <string name="clear_favorites_confirmation">All favorite apps will be removed.</string>
     <string name="add_favorite">Add favorite</string>
-    <string name="move_app">Move</string>
-    <string name="remove_app">Remove</string>
 
-    <!-- Reordering, shared by both editors -->
+    <!-- Reordering and rows, shared by both editors -->
+    <string name="move_item">Move</string>
+    <string name="remove_item">Remove</string>
     <string name="move_up">Move up</string>
     <string name="move_down">Move down</string>
 
@@ -62,8 +62,6 @@
     <string name="widget_date">Date</string>
     <string name="widget_alarm">Alarm</string>
     <string name="widget_alarm_none">No alarm</string>
-    <string name="move_widget">Move</string>
-    <string name="remove_widget">Remove</string>
 
     <!-- Gestures screen -->
     <string name="gesture_hold">Hold press</string>

@@ -1,16 +1,12 @@
 package io.github.aurelia.nlauncher.ui
 
 import android.content.Context
-import android.graphics.Color
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.Drawable
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.TextView
 import io.github.aurelia.nlauncher.FavoriteApp
 import io.github.aurelia.nlauncher.Favorites
-import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
 
@@ -30,28 +26,10 @@ object FavoriteViews {
         view.textSize = LauncherConfig.labelTextSp.get(context)
         view.setTextColor(LauncherConfig.textColor.get(context))
 
-        val iconsShown = LauncherConfig.iconsShown.get(context)
-        val size = LauncherConfig.iconSizeSp.get(context).spToPx(context)
-
-        // Keep the icon slot occupied even while the icon is unavailable.
-        val placeholder = ColorDrawable(Color.TRANSPARENT)
-
-        fun setIcon(drawable: Drawable?) {
-            if (view.tag != favorite.key) return
-
-            val icon = ShadowedIconDrawable.wrap(drawable) ?: placeholder
-            icon.setBounds(0, 0, size, size)
-            view.setCompoundDrawablesRelative(icon, null, null, null)
-        }
-
-        if (iconsShown) {
-            setIcon(
-                Icons.icon(context, favorite.intent) { loaded ->
-                    setIcon(loaded)
-                },
-            )
+        if (LauncherConfig.iconsShown.get(context)) {
+            view.bindAppIcon(favorite.intent, IconPosition.START)
         } else {
-            view.setCompoundDrawablesRelative(null, null, null, null)
+            view.clearAppIcon()
         }
 
         return view

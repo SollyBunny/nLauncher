@@ -12,7 +12,6 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.text.Editable
-import android.text.TextWatcher
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -22,8 +21,9 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.TextView
 import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.SimpleTextWatcher
+import io.github.aurelia.nlauncher.ui.colorToHex
 import io.github.aurelia.nlauncher.ui.dpToPx
-import java.util.Locale
 
 /**
  * A colour picker shaped like the rest of the settings: the platform alert dialog
@@ -90,40 +90,25 @@ fun showColorPicker(
         update(color)
     }
 
+    fun syncFromHex(): Boolean {
+        val color = parseHex(hexInput.text.toString()) ?: return false
+        Color.colorToHSV(color, hsv)
+        saturationValue.refresh()
+        hueBar.refresh()
+        return true
+    }
+
     hexInput.addTextChangedListener(
-        object : TextWatcher {
-            override fun beforeTextChanged(
-                s: CharSequence?,
-                start: Int,
-                count: Int,
-                after: Int,
-            ) = Unit
-
-            override fun onTextChanged(
-                s: CharSequence?,
-                start: Int,
-                before: Int,
-                count: Int,
-            ) = Unit
-
+        object : SimpleTextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                if (updatingHex) return
-                val color = parseHex(s?.toString().orEmpty()) ?: return
-                Color.colorToHSV(color, hsv)
-                renderPreview(color)
-                saturationValue.refresh()
-                hueBar.refresh()
+                if (!updatingHex && syncFromHex()) renderPreview(Color.HSVToColor(hsv))
             }
         },
     )
 
     hexInput.setOnFocusChangeListener { _, hasFocus ->
         if (!hasFocus) {
-            parseHex(hexInput.text.toString())?.let { color ->
-                Color.colorToHSV(color, hsv)
-                saturationValue.refresh()
-                hueBar.refresh()
-            }
+            syncFromHex()
             // Whether the text was valid or not, put the field back in its canonical
             // form: six opaque digits, so nothing about alpha ever reaches the user.
             update(Color.HSVToColor(hsv))
@@ -156,6 +141,42 @@ fun showColorPicker(
     dialog.show()
 }
 
+/** The touch/accessibility behaviour shared by the two picker widgets. */
+abstract class ColorPickerTouchView(
+    context: Context,
+    attrs: AttributeSet? = null,
+) : View(context, attrs) {
+    init {
+        isClickable = true
+        isFocusable = true
+    }
+
+    override fun onTouchEvent(event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                parent?.requestDisallowInterceptTouchEvent(true)
+                updateFrom(event)
+            }
+            MotionEvent.ACTION_MOVE -> updateFrom(event)
+            MotionEvent.ACTION_UP -> {
+                updateFrom(event)
+                parent?.requestDisallowInterceptTouchEvent(false)
+                performClick()
+            }
+            MotionEvent.ACTION_CANCEL -> parent?.requestDisallowInterceptTouchEvent(false)
+            else -> return super.onTouchEvent(event)
+        }
+        return true
+    }
+
+    override fun performClick(): Boolean {
+        super.performClick()
+        return true
+    }
+
+    protected abstract fun updateFrom(event: MotionEvent)
+}
+
 /**
  * The saturation/value square. Its bitmap is painted once per hue instead of once per
  * frame, so dragging the selector only redraws the marker.
@@ -163,7 +184,7 @@ fun showColorPicker(
 class ColorSaturationValueView(
     context: Context,
     attrs: AttributeSet? = null,
-) : View(context, attrs) {
+) : ColorPickerTouchView(context, attrs) {
     var hsv: FloatArray = floatArrayOf(0f, 0f, 1f)
         set(value) {
             field = value
@@ -180,11 +201,6 @@ class ColorSaturationValueView(
     private val path = Path()
     private val rect = RectF()
     private var bitmap: Bitmap? = null
-
-    init {
-        isClickable = true
-        isFocusable = true
-    }
 
     override fun onSizeChanged(
         w: Int,
@@ -252,30 +268,7 @@ class ColorSaturationValueView(
         canvas.drawCircle(x, y, markerRadius, strokePaint)
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                parent?.requestDisallowInterceptTouchEvent(true)
-                updateFrom(event)
-            }
-            MotionEvent.ACTION_MOVE -> updateFrom(event)
-            MotionEvent.ACTION_UP -> {
-                updateFrom(event)
-                parent?.requestDisallowInterceptTouchEvent(false)
-                performClick()
-            }
-            MotionEvent.ACTION_CANCEL -> parent?.requestDisallowInterceptTouchEvent(false)
-            else -> return super.onTouchEvent(event)
-        }
-        return true
-    }
-
-    override fun performClick(): Boolean {
-        super.performClick()
-        return true
-    }
-
-    private fun updateFrom(event: MotionEvent) {
+    override fun updateFrom(event: MotionEvent) {
         val w = width.toFloat()
         val h = height.toFloat()
         if (w <= 0f || h <= 0f) return
@@ -290,7 +283,7 @@ class ColorSaturationValueView(
 class ColorHueView(
     context: Context,
     attrs: AttributeSet? = null,
-) : View(context, attrs) {
+) : ColorPickerTouchView(context, attrs) {
     var hsv: FloatArray = floatArrayOf(0f, 0f, 1f)
 
     var onColorChanged: ((Int) -> Unit)? = null
@@ -306,11 +299,6 @@ class ColorHueView(
     private val thumbWidth = 12f.dpToPx(context).toFloat()
     private var shader: Shader? = null
 
-    init {
-        isClickable = true
-        isFocusable = true
-    }
-
     fun refresh() = invalidate()
 
     override fun onSizeChanged(
@@ -321,15 +309,9 @@ class ColorHueView(
     ) {
         super.onSizeChanged(w, h, oldw, oldh)
         val colors =
-            intArrayOf(
-                Color.HSVToColor(floatArrayOf(0f, 1f, 1f)),
-                Color.HSVToColor(floatArrayOf(60f, 1f, 1f)),
-                Color.HSVToColor(floatArrayOf(120f, 1f, 1f)),
-                Color.HSVToColor(floatArrayOf(180f, 1f, 1f)),
-                Color.HSVToColor(floatArrayOf(240f, 1f, 1f)),
-                Color.HSVToColor(floatArrayOf(300f, 1f, 1f)),
-                Color.HSVToColor(floatArrayOf(360f, 1f, 1f)),
-            )
+            (0..360 step 60)
+                .map { Color.HSVToColor(floatArrayOf(it.toFloat(), 1f, 1f)) }
+                .toIntArray()
         shader =
             if (w > 0) {
                 LinearGradient(0f, 0f, w.toFloat(), 0f, colors, null, Shader.TileMode.CLAMP)
@@ -374,30 +356,7 @@ class ColorHueView(
         paint.style = Paint.Style.FILL
     }
 
-    override fun onTouchEvent(event: MotionEvent): Boolean {
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                parent?.requestDisallowInterceptTouchEvent(true)
-                updateFrom(event)
-            }
-            MotionEvent.ACTION_MOVE -> updateFrom(event)
-            MotionEvent.ACTION_UP -> {
-                updateFrom(event)
-                parent?.requestDisallowInterceptTouchEvent(false)
-                performClick()
-            }
-            MotionEvent.ACTION_CANCEL -> parent?.requestDisallowInterceptTouchEvent(false)
-            else -> return super.onTouchEvent(event)
-        }
-        return true
-    }
-
-    override fun performClick(): Boolean {
-        super.performClick()
-        return true
-    }
-
-    private fun updateFrom(event: MotionEvent) {
+    override fun updateFrom(event: MotionEvent) {
         val usable = width - thumbWidth
         if (usable <= 0f) return
         hsv[0] = ((event.x - thumbWidth / 2f) / usable).coerceIn(0f, 1f) * 360f
@@ -413,8 +372,6 @@ class ColorHueView(
 
 private const val OPAQUE = 0xFF000000.toInt()
 
-private fun colorToHex(color: Int): String = String.format(Locale.ROOT, "#%06X", color and 0xFFFFFF)
-
 /**
  * Six digits are the form shown, but eight are accepted too so a value pasted from
  * somewhere that includes alpha still lands on a usable opaque colour.
@@ -422,8 +379,8 @@ private fun colorToHex(color: Int): String = String.format(Locale.ROOT, "#%06X",
 private fun parseHex(text: String): Int? {
     val hex = text.trim().removePrefix("#")
     val digits = if (hex.length == 8) hex.takeLast(6) else hex
-    if (digits.length != 6 || !digits.all { it.isDigit() || it.lowercaseChar() in 'a'..'f' }) return null
-    return (OPAQUE or digits.toLong(16).toInt())
+    if (digits.length != 6) return null
+    return digits.toLongOrNull(16)?.let { OPAQUE or it.toInt() }
 }
 
 /** Black or white, whichever is readable on [color]. */

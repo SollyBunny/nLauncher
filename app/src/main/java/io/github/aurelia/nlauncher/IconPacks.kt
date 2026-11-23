@@ -59,21 +59,21 @@ object IconPacks {
             this.pack = pack
             val appContext = context.applicationContext
 
-            var resources =
-                try {
-                    appContext.packageManager.getResourcesForApplication(pack)
-                } catch (_: PackageManager.NameNotFoundException) {
-                    Toast.makeText(context, context.getString(R.string.icon_pack_not_found, pack), Toast.LENGTH_SHORT).show()
-                    null
-                }
+            var resources: Resources? =
+                runCatching { appContext.packageManager.getResourcesForApplication(pack) }
+                    .getOrElse {
+                        Toast.makeText(context, context.getString(R.string.icon_pack_not_found, pack), Toast.LENGTH_SHORT).show()
+                        null
+                    }
 
-            this.drawableNames = try {
-                resources?.let { loadIcons(appContext, resources) }
-            } catch (e: Exception) {
-                Toast.makeText(context, context.getString(R.string.icon_pack_load_error, pack, e.message), Toast.LENGTH_SHORT).show()
-                resources = null
-                null
-            } ?: HashMap()
+            this.drawableNames =
+                runCatching { resources?.let { loadIcons(appContext, it) } }
+                    .getOrElse { e ->
+                        val message = context.getString(R.string.icon_pack_load_error, pack, e.message)
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        resources = null
+                        null
+                    } ?: HashMap()
 
             this.resources = resources
         }
@@ -93,27 +93,8 @@ object IconPacks {
                             val componentValue = parser.getAttributeValue(null, "component")
                             val drawableName = parser.getAttributeValue(null, "drawable")
 
-                            // Do 0 or 1 substrings instead of 2 with removePrefix/Suffix
                             val value = componentValue ?: continue
-                            val start =
-                                if (value.startsWith("ComponentInfo{")) {
-                                    "ComponentInfo{".length
-                                } else {
-                                    0
-                                }
-                            val end =
-                                if (value.endsWith("}")) {
-                                    value.length - 1
-                                } else {
-                                    value.length
-                                }
-                            val normalized =
-                                if (start == 0 && end == value.length) {
-                                    value
-                                } else {
-                                    value.substring(start, end)
-                                }
-
+                            val normalized = value.removePrefix("ComponentInfo{").removeSuffix("}")
                             val component = ComponentName.unflattenFromString(normalized)
                             result.putIfAbsent(component ?: continue, drawableName ?: continue)
                         }
@@ -126,7 +107,7 @@ object IconPacks {
             @SuppressLint("DiscouragedAPI")
             val xmlId =
                 resources.getIdentifier(
-                    "app" + "filter",
+                    "appfilter",
                     "xml",
                     pack,
                 )

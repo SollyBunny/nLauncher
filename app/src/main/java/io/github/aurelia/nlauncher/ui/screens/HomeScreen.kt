@@ -29,6 +29,7 @@ import io.github.aurelia.nlauncher.ui.WIDGET_GAP_DP
 import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import io.github.aurelia.nlauncher.ui.wrapContentParams
 import java.util.Date
 import kotlin.math.abs
 
@@ -160,22 +161,15 @@ class HomeScreen(
         // the resume that follows it are two activations of the same thing. Only the
         // clock and the alarm need one — the date does not move by the minute, and
         // the alarm has to be re-read so it clears once it has gone off.
-        if (widgetViews.any { it.first == Widget.CLOCK || it.first == Widget.ALARM }) {
-            if (!clockTicking) {
-                clockTicking = true
-                clockHandler.post(clockTick)
-            }
-        } else if (clockTicking) {
-            clockTicking = false
-            clockHandler.removeCallbacks(clockTick)
-        }
+        setClockTicking(widgetViews.any { it.first == Widget.CLOCK || it.first == Widget.ALARM })
     }
 
-    override fun onDeactivated() {
-        if (clockTicking) {
-            clockTicking = false
-            clockHandler.removeCallbacks(clockTick)
-        }
+    override fun onDeactivated() = setClockTicking(false)
+
+    private fun setClockTicking(enabled: Boolean) {
+        if (enabled == clockTicking) return
+        clockTicking = enabled
+        if (enabled) clockHandler.post(clockTick) else clockHandler.removeCallbacks(clockTick)
     }
 
     override fun onDestroyed() {
@@ -191,13 +185,7 @@ class HomeScreen(
             val view = WidgetViews.create(activity, widget)
             widgetsContainer.addView(
                 view,
-                LinearLayout
-                    .LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    ).apply {
-                        setMargins(0, 0, 0, widgetGap)
-                    },
+                wrapContentParams().apply { setMargins(0, 0, 0, widgetGap) },
             )
             widgetViews.add(widget to view)
         }
@@ -240,13 +228,7 @@ class HomeScreen(
             }
             favoritesContainer.addView(
                 row,
-                LinearLayout
-                    .LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    ).apply {
-                        topMargin = if (index == 0) 0 else favoritesGap
-                    },
+                wrapContentParams().apply { topMargin = if (index == 0) 0 else favoritesGap },
             )
         }
     }
