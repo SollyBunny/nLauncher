@@ -206,10 +206,6 @@ object LauncherConfig {
             },
             Intent(Intent.ACTION_VIEW, Uri.parse("https://example.com")),
             Intent(Intent.ACTION_VIEW, Uri.parse("mailto:")),
-            Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_APP_MESSAGING)
-            },
-            Intent(Intent.ACTION_DIAL),
             Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(
                     MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
@@ -219,7 +215,6 @@ object LauncherConfig {
             Intent(Intent.ACTION_MAIN).apply {
                 addCategory(Intent.CATEGORY_APP_CALENDAR)
             },
-            Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA),
             Intent(Settings.ACTION_SETTINGS),
         ).map { appifyIntent(context, it) }.distinctBy { it }.map { FavoriteApp(it) }
 }
