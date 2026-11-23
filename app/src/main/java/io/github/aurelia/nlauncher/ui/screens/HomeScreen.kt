@@ -29,6 +29,7 @@ import io.github.aurelia.nlauncher.ui.WIDGET_GAP_DP
 import io.github.aurelia.nlauncher.ui.WidgetViews
 import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import io.github.aurelia.nlauncher.ui.wrapContentParams
 import java.util.Date
 import kotlin.math.abs
 
@@ -191,13 +192,7 @@ class HomeScreen(
             val view = WidgetViews.create(activity, widget)
             widgetsContainer.addView(
                 view,
-                LinearLayout
-                    .LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    ).apply {
-                        setMargins(0, 0, 0, widgetGap)
-                    },
+                wrapContentParams().apply { setMargins(0, 0, 0, widgetGap) },
             )
             widgetViews.add(widget to view)
         }
@@ -240,13 +235,7 @@ class HomeScreen(
             }
             favoritesContainer.addView(
                 row,
-                LinearLayout
-                    .LayoutParams(
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                    ).apply {
-                        topMargin = if (index == 0) 0 else favoritesGap
-                    },
+                wrapContentParams().apply { topMargin = if (index == 0) 0 else favoritesGap },
             )
         }
     }

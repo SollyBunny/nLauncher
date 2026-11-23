@@ -1,9 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    One editable favorite in the home screen's edit mode: a drag handle on the left,
-    the exact home-screen item in the middle, and a delete button on the right. The
-    row stays compact (wrap_content) so the items keep their bottom-left spot.
--->
+<!-- One editable row: a drag handle, the exact home-screen view as a preview, and a
+     delete button. Shared by the favorites and widgets editors. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
@@ -11,25 +8,25 @@
     android:orientation="horizontal">
 
     <ImageView
-        android:id="@+id/favorite_handle"
+        android:id="@+id/edit_handle"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:contentDescription="@string/move_app"
+        android:contentDescription="@string/move_item"
         android:padding="12dp"
         android:src="@drawable/ic_drag_handle"
         android:tint="@color/icon_tint_muted" />
 
     <FrameLayout
-        android:id="@+id/favorite_preview"
+        android:id="@+id/edit_preview"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
     <ImageView
-        android:id="@+id/favorite_delete"
+        android:id="@+id/edit_delete"
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:background="?android:attr/selectableItemBackground"
-        android:contentDescription="@string/remove_app"
+        android:contentDescription="@string/remove_item"
         android:padding="12dp"
         android:src="@drawable/ic_delete"
         android:tint="@color/icon_tint_delete" />
