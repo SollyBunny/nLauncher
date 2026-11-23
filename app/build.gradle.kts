@@ -1,7 +1,25 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jlleitschuh.gradle.ktlint")
 }
+
+val versionProperties =
+    Properties().apply {
+        rootProject.file("version.properties").inputStream().use { load(it) }
+    }
+val appVersionName = versionProperties.getProperty("VERSION_NAME")
+val appVersionCode = versionProperties.getProperty("VERSION_CODE").toInt()
+
+// Give each ABI split a distinct versionCode so the variants never look like
+// the same update to an installer. The universal APK keeps the base code.
+val abiVersionCodeOffsets =
+    mapOf(
+        "arm64-v8a" to 1,
+        "armeabi-v7a" to 2,
+        "x86_64" to 3,
+    )
 
 android {
     namespace = "io.github.aurelia.nlauncher"
@@ -11,38 +29,50 @@ android {
         applicationId = "io.github.aurelia.nlauncher"
         minSdk = 26
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1"
+        versionCode = appVersionCode
+        versionName = appVersionName
+    }
+
+    dependenciesInfo {
+        // Google's dependency-info block is a non-free, non-reproducible blob.
+        includeInApk = false
+        includeInBundle = false
     }
 
     signingConfigs {
         create("release") {
-            storeFile =
-                rootProject.file(
+            // No keystore in a clean checkout: F-Droid builds unsigned and signs
+            // with its own key. Signing is enabled only when the release CI
+            // supplies a keystore through the environment.
+            val storePath = System.getenv("ANDROID_KEYSTORE_PATH")
+            if (!storePath.isNullOrBlank()) {
+                storeFile = rootProject.file(storePath)
+                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
+                keyAlias =
                     System
-                        .getenv("ANDROID_KEYSTORE_PATH")
+                        .getenv("ANDROID_KEY_ALIAS")
                         ?.takeIf { it.isNotBlank() }
-                        ?: "release.jks",
-                )
-            storePassword =
-                System
-                    .getenv("ANDROID_KEYSTORE_PASSWORD")
-                    ?.takeIf { it.isNotBlank() }
-            keyAlias = System
-                .getenv("ANDROID_KEY_ALIAS")
-                ?.takeIf { it.isNotBlank() }
-                ?: "release"
-            keyPassword = System
-                .getenv("ANDROID_KEY_PASSWORD")
-                ?.takeIf { it.isNotBlank() }
-                ?: storePassword
+                        ?: "release"
+                keyPassword =
+                    System
+                        .getenv("ANDROID_KEY_PASSWORD")
+                        ?.takeIf { it.isNotBlank() }
+                        ?: storePassword
+            }
         }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            if (!System.getenv("ANDROID_KEYSTORE_PATH").isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
+            // This embeds the absolute checkout path, which differs between
+            // GitHub Actions and F-Droid's build server.
+            vcsInfo {
+                include = false
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -83,19 +113,22 @@ android {
 }
 
 androidComponents {
-    val version = android.defaultConfig.versionName
     onVariants { variant ->
         variant.outputs.forEach { output ->
             val abi =
                 output.filters
                     .find { it.filterType.toString() == "ABI" }
                     ?.identifier
-                    ?: "universal"
+            val code =
+                abi?.let { appVersionCode + abiVersionCodeOffsets.getValue(it) }
+                    ?: appVersionCode
+            val suffix = abi ?: "universal"
+            output.versionCode.set(code)
             output.outputFileName.set(
                 if (variant.name == "release") {
-                    "nLauncher-$version-$abi.apk"
+                    "nLauncher-$appVersionName-$code-$suffix.apk"
                 } else {
-                    "nLauncher-$version-$abi-${variant.name}.apk"
+                    "nLauncher-$appVersionName-$code-$suffix-${variant.name}.apk"
                 },
             )
         }

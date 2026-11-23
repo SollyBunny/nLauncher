@@ -1,0 +1,35 @@
+# Draft recipe for fdroiddata.
+# Copy to fdroiddata/metadata/io.github.aurelia.nlauncher.yml before submitting.
+# Replace <FULL_40_CHAR_COMMIT_HASH> with the commit of tag v0.1.
+#
+# Only the universal APK is published here: it is small (~724 KB), so ABI splits
+# would add maintenance without a meaningful size benefit. The recipe still
+# builds all splits; `output:` selects the universal APK.
+
+Categories:
+  - System
+AuthorName: SollyBunny
+License: GPL-3.0-or-later
+SourceCode: https://github.com/SollyBunny/nLauncher
+IssueTracker: https://github.com/SollyBunny/nLauncher/issues
+RepoType: git
+Repo: https://github.com/SollyBunny/nLauncher
+
+Binaries: https://github.com/SollyBunny/nLauncher/releases/download/v%v/nLauncher-%v-%c-universal.apk
+
+Builds:
+  - versionName: '0.1'
+    versionCode: 1
+    commit: <FULL_40_CHAR_COMMIT_HASH>
+    gradle: yes
+    sudo: apt install -y openjdk-21-jdk-headless
+    output: app/build/outputs/apk/release/*-universal.apk
+
+# SHA-256 fingerprint of release.jks (see `keytool -list -keystore release.jks`).
+AllowedAPKSigningKeys:
+  - ec427d1709b48163c7cb7ba1d13c3a14c3ea9849b9a5762852746d7f945b0d5a6
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags
+CurrentVersion: '0.1'
+CurrentVersionCode: 1

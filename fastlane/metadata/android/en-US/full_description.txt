@@ -1,0 +1,11 @@
+nLauncher is a simple launcher based on its namesake, mLauncher.
+
+Features:
+* Simple home screen with rearrangeable favorite apps and widgets
+* Gestures and basic theme customization
+* Support for icon packs
+* Search sorted by recently opened apps
+* As lightweight as possible
+
+nLauncher is free software licensed under GPL-3.0-or-later.
+.

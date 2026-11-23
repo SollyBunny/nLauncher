@@ -1,21 +1,26 @@
 name: Release
 
-on:
-  push:
-    branches:
-      - main
+on: workflow_dispatch
 
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
     name: Release
     runs-on: ubuntu-latest
+
+    env:
+      ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up JDK
         uses: actions/setup-java@v6
@@ -26,45 +31,72 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
 
+      - name: Read version
+        id: version
+        run: |
+          set -euo pipefail
+          . ./version.properties
+          {
+            echo "name=$VERSION_NAME"
+            echo "code=$VERSION_CODE"
+            echo "tag=v$VERSION_NAME"
+          } >> "$GITHUB_OUTPUT"
+          if git rev-parse --verify --quiet "refs/tags/v$VERSION_NAME" >/dev/null; then
+            echo "::error::Tag v$VERSION_NAME already exists. Bump version.properties first." >&2
+            exit 1
+          fi
+
+      # F-Droid's build server derives this from the commit too. Keeping it in
+      # sync avoids timestamp differences in the rebuilt APK.
+      - name: Set SOURCE_DATE_EPOCH
+        run: echo "SOURCE_DATE_EPOCH=$(git log -1 --format=%ct)" >> "$GITHUB_ENV"
+
       - name: Decode signing keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          set -euo pipefail
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret is missing" >&2
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$ANDROID_KEYSTORE_PATH"
 
-      - name: Assemble signed release
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+      - name: Build signed release
         run: ./gradlew :app:assembleRelease
 
       - name: Collect APKs
-        shell: bash
         run: |
-          mkdir -p apks
-
-          find app/build/outputs/apk/release \
-            -type f -name '*.apk' \
-            -exec cp {} apks/ \;
-
-          echo "Generated APKs:"
+          set -euo pipefail
+          mkdir -p apks reference
+          find app/build/outputs/apk/release -type f -name '*.apk' -exec cp {} apks/ \;
+          cp apks/*.apk reference/
           ls -lh apks/
-
           test -n "$(find apks -type f -name '*.apk' -print -quit)"
 
-      - name: Delete previous latest release
+      - name: Verify reproducible build
+        run: |
+          set -euo pipefail
+          ./gradlew clean :app:assembleRelease
+          for apk in app/build/outputs/apk/release/*.apk; do
+            name="$(basename "$apk")"
+            if ! cmp -s "$apk" "reference/$name"; then
+              echo "Non-reproducible APK: $name" >&2
+              exit 1
+            fi
+          done
+          echo "All APKs are byte-for-byte reproducible."
+
+      - name: Create release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NAME: ${{ steps.version.outputs.name }}
+          CODE: ${{ steps.version.outputs.code }}
+          TAG: ${{ steps.version.outputs.tag }}
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-
-      - name: Upload APKs to GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: latest
-          name: Latest Release
-          files: apks/*.apk
-          prerelease: true
-          make_latest: false
+          set -euo pipefail
+          gh release create "$TAG" \
+            --title "$NAME" \
+            --notes-file "fastlane/metadata/android/en-US/changelogs/$CODE.txt" \
+            --target "$GITHUB_SHA" \
+            apks/*.apk
