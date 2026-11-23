@@ -72,8 +72,8 @@ class ShadowedIconDrawable private constructor(
         val source: Drawable?
         val inflatedTint: ColorStateList?
         try {
-            source = a.getDrawable(0)
-            inflatedTint = a.getColorStateList(1)
+            source = a.getDrawable(SOURCE_ATTR_SRC)
+            inflatedTint = a.getColorStateList(SOURCE_ATTR_TINT)
         } finally {
             a.recycle()
         }
@@ -137,7 +137,7 @@ class ShadowedIconDrawable private constructor(
     ): Bitmap {
         shadowBitmap?.let { if (width == shadowWidth && height == shadowHeight) return it }
 
-        val pad = (SHADOW_BLUR_SIGMA * 3).roundToInt()
+        val pad = SHADOW_PAD_PX
         val sharp = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val previousAlpha = icon.alpha
         val previousFilter = icon.colorFilter
@@ -265,11 +265,15 @@ class ShadowedIconDrawable private constructor(
         private const val SHADOW_BLUR_RADIUS = 3f
         private const val SHADOW_BLUR_SIGMA = SHADOW_BLUR_RADIUS * 0.57735f + 0.5f
 
+        /** Blur room around the icon, in pixels. */
+        private val SHADOW_PAD_PX = (SHADOW_BLUR_SIGMA * 3).roundToInt()
+
         /** How far the shadow reaches past the icon's bounds, in pixels. */
-        val SHADOW_EXTENT_PX: Int =
-            (SHADOW_BLUR_SIGMA * 3).roundToInt() + SHADOW_OFFSET.toInt()
+        val SHADOW_EXTENT_PX: Int = SHADOW_PAD_PX + SHADOW_OFFSET.toInt()
 
         /** The XML attributes a wrapper drawable reads: its icon and its tint. */
+        private const val SOURCE_ATTR_SRC = 0
+        private const val SOURCE_ATTR_TINT = 1
         private val SOURCE_ATTRS = intArrayOf(android.R.attr.src, android.R.attr.tint)
 
         /** Wrap [drawable], or return null when there is no icon to shadow. */

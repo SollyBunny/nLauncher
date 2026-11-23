@@ -3,12 +3,12 @@ package io.github.aurelia.nlauncher
 import android.content.Context
 
 /**
- * How often each app has been picked, taken from a fixed-length buffer of the most
- * recent picks.
+ * The apps picked most recently, kept in a fixed-length buffer of the last [LIMIT]
+ * picks, newest first. An app that has not been opened in a while drops out on its
+ * own, which is what makes the recent section of the search screen reorder itself.
  *
- * The buffer holds the last [LIMIT] picks, newest first, so an app that has not been
- * opened in a while drops out on its own. It lives in shared preferences next to the
- * rest of the launcher's state, so it survives the activity being recreated.
+ * The buffer lives in shared preferences next to the rest of the launcher's state,
+ * so it survives the activity being recreated.
  */
 object AppUsage {
     private const val LIMIT = 100
@@ -23,11 +23,6 @@ object AppUsage {
         recent.set(context, (listOf(key) + recent.get(context)).take(LIMIT))
     }
 
-    /**
-     * The apps in the recent buffer, newest first, each once.
-     *
-     * The buffer holds the last [LIMIT] picks, so this is both the recent section and
-     * its order: an app that has not been opened in a while drops out on its own.
-     */
+    /** The apps in the recent buffer, newest first, each once. */
     fun recentKeys(context: Context): List<String> = recent.get(context).distinct()
 }

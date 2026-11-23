@@ -26,16 +26,10 @@ fun launchComponent(
 
     val pm = context.packageManager
     val packages =
-        buildList {
-            pm
-                .resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)
-                ?.activityInfo
-                ?.packageName
-                ?.let(::add)
-            pm
-                .queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY)
-                .mapTo(this) { it.activityInfo.packageName }
-        }.distinct()
+        sequenceOf(pm.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName)
+            .plus(pm.queryIntentActivities(intent, PackageManager.MATCH_DEFAULT_ONLY).map { it.activityInfo.packageName })
+            .filterNotNull()
+            .distinct()
             .filter { it != context.packageName }
 
     for (packageName in packages) {

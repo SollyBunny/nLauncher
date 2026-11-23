@@ -253,13 +253,9 @@ class SearchScreen(
         // A transparent divider is the gap between rows: the rows themselves carry no
         // vertical padding, so a gap of 0 would leave them touching.
         results.divider = ColorDrawable(Color.TRANSPARENT)
-        results.dividerHeight =
-            LauncherConfig.searchGapDp
-                .get(activity)
-                .toFloat()
-                .dpToPx(activity)
         results.adapter = rows
         listView = results
+        applySearchGap()
 
         // A-Z index on the left, results filling all the remaining width so the
         // app list gets as much room as the screen can spare.

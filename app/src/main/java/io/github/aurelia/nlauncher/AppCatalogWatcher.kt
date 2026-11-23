@@ -12,10 +12,10 @@ class AppEntry(
     val label: String,
     val intent: Intent,
 ) {
-    /** Stable identity for the icon cache. **/
+    /** Stable identity for the icon cache. */
     val key: String = intent.toUri(Intent.URI_INTENT_SCHEME)
 
-    /** Normalized search label. **/
+    /** Normalized search label. */
     val searchLabel: String = label.lowercase(Locale.ROOT)
 }
 
@@ -25,7 +25,7 @@ data class AppCatalog(
 )
 
 /**
- * Keeps up-to-date catalog of launchable apps
+ * Keeps an up-to-date catalog of launchable apps
  */
 object AppCatalogWatcher {
     /** The package query never races itself: one background thread does all of it. */
@@ -37,7 +37,7 @@ object AppCatalogWatcher {
     private var resolving: Boolean = false
 
     private var cached: AppCatalog? = null
-    private val callbacks = mutableSetOf<(AppCatalog?) -> Unit>()
+    private val callbacks = mutableSetOf<(AppCatalog) -> Unit>()
 
     fun init(context: Context) {
         // Resolve now to prevent wait when searching
@@ -47,11 +47,9 @@ object AppCatalogWatcher {
         }
     }
 
-    fun watchAppCatalog(callback: (AppCatalog?) -> Unit) {
+    fun watchAppCatalog(callback: (AppCatalog) -> Unit) {
         callbacks += callback
-        if (cached != null) {
-            callback(cached)
-        }
+        cached?.let(callback)
     }
 
     // ---- Resolving -------------------------------------------------------

@@ -77,19 +77,20 @@ object Icons {
         intent: Intent,
         onReady: ((Drawable?) -> Unit)? = null,
     ): Drawable? {
-        cache[intent.key]?.let { entry ->
+        val key = intent.key
+        cache[key]?.let { entry ->
             val icon = entry.new()
             onReady?.invoke(icon)
             return icon
         }
-        if (intent.key in failed) {
+        if (key in failed) {
             // Already known to be impossible: answer straight away rather than queue
             // a waiter nobody is going to come back for.
             onReady?.invoke(null)
             return null
         }
-        if (onReady != null) waiting.getOrPut(intent.key) { mutableListOf() }.add(onReady)
-        if (loading.add(intent.key)) schedule(context, intent)
+        if (onReady != null) waiting.getOrPut(key) { mutableListOf() }.add(onReady)
+        if (loading.add(key)) schedule(context, intent)
         return null
     }
 
