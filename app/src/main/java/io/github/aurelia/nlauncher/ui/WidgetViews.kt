@@ -25,9 +25,14 @@ object WidgetViews {
         return DateFormat.getTimeFormat(context).format(Date(next))
     }
 
-    /** Open the clock app, resolved to its launcher activity so the right app appears. */
-    private fun openAlarms(activity: LauncherActivity) {
+    /** The clock and date open the Clock app; the alarm action is only how we find it. */
+    private fun launchClockApp(activity: LauncherActivity) {
         activity.launch(appifyIntent(activity, Intent(AlarmClock.ACTION_SHOW_ALARMS)))
+    }
+
+    /** The alarm widget goes to the alarm screen, not the Clock app's home activity. */
+    private fun launchAlarmScreen(activity: LauncherActivity) {
+        activity.launch(Intent(AlarmClock.ACTION_SHOW_ALARMS))
     }
 
     private fun createView(
@@ -72,8 +77,8 @@ object WidgetViews {
         widget: Widget,
     ): TextView =
         when (widget) {
-            Widget.CLOCK -> createView(activity, 2.5f, bold = true) { openAlarms(activity) }
-            Widget.DATE -> createView(activity, 1f) { openAlarms(activity) }
-            Widget.ALARM -> createView(activity, 1f, alarmIcon = true) { activity.launch(Intent(AlarmClock.ACTION_SHOW_ALARMS)) }
+            Widget.CLOCK -> createView(activity, 2.5f, bold = true) { launchClockApp(activity) }
+            Widget.DATE -> createView(activity, 1f) { launchClockApp(activity) }
+            Widget.ALARM -> createView(activity, 1f, alarmIcon = true) { launchAlarmScreen(activity) }
         }.apply { text = text(activity, widget, Date()) }
 }
