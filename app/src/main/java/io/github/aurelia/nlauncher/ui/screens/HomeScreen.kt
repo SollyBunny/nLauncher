@@ -7,6 +7,7 @@ import android.util.Log
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.VelocityTracker
+import android.view.View
 import android.view.ViewConfiguration
 import android.widget.LinearLayout
 import android.widget.TextView
@@ -41,6 +42,7 @@ class HomeScreen(
 
     private val favoritesContainer: LinearLayout = view.findViewById(R.id.favorites)
     private val widgetsContainer: LinearLayout = view.findViewById(R.id.widgets)
+    private val bottomGap: View = view.findViewById(R.id.bottom_gap)
 
     /** The widget views currently on screen, in order, so the tick can refresh them. */
     private val widgetViews = mutableListOf<Pair<Widget, TextView>>()
@@ -146,6 +148,7 @@ class HomeScreen(
 
     override fun onActivated() {
         actions = LauncherConfig.gestureActions(activity)
+        bottomGap.visibility = if (LauncherConfig.alignToBottom.get(activity)) View.GONE else View.VISIBLE
 
         // The widgets are rebuilt every time (cheap, and their text moves with the
         // clock); the favorites only when they have actually changed — see below.

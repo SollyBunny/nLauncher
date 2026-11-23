@@ -165,6 +165,9 @@ object LauncherConfig {
     /** The space between the apps listed in the search menu, in dp. */
     val searchGapDp = SettingInt("search_gap_dp", default = 8, min = 2, max = 16, step = 1)
 
+    /** Whether the favorites sit against the bottom or center of the home screen */
+    val alignToBottom = SettingBool("align_to_bottom", default = false)
+
     /** Every gesture's own setting, keyed by the gesture it belongs to. */
     val gestureSettings: Map<Gesture, SettingGestureAction> =
         Gesture.entries.associateWith { gesture ->

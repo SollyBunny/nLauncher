@@ -2,6 +2,7 @@ package io.github.aurelia.nlauncher.ui.screens
 
 import android.app.AlertDialog
 import android.view.View
+import android.widget.CheckBox
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -50,6 +51,11 @@ class LookAndFeelScreen(
         rows.addView(sizeRow(R.string.icon_size, LauncherConfig.iconSizeSp))
         rows.addView(sizeRow(R.string.favorites_gap, LauncherConfig.favoritesGapDp, valueRes = R.string.size_dp))
         rows.addView(sizeRow(R.string.search_gap, LauncherConfig.searchGapDp, valueRes = R.string.size_dp))
+        rows.addView(
+            toggleRow(R.string.align_to_bottom, LauncherConfig.alignToBottom.get(activity)) { enabled ->
+                LauncherConfig.alignToBottom.set(activity, enabled)
+            },
+        )
         rows.addView(settingRow(R.string.icon_pack, iconPackSummary()) { chooseIconPack() })
     }
 
@@ -87,6 +93,24 @@ class LookAndFeelScreen(
             default = setting.defaultValue(activity).toFloat(),
             valueRes = valueRes,
         ) { setting.set(activity, it.toInt()) }
+
+    /** A boolean setting's row: the whole row flips the checkbox, which is saved on change. */
+    private fun toggleRow(
+        titleRes: Int,
+        checked: Boolean,
+        onChanged: (Boolean) -> Unit,
+    ): View {
+        val row = activity.layoutInflater.inflate(R.layout.item_toggle_setting, rows, false)
+        row.findViewById<TextView>(R.id.toggle_name).setText(titleRes)
+        val toggle = row.findViewById<CheckBox>(R.id.toggle_value)
+        toggle.isChecked = checked
+        row.setOnClickListener {
+            val enabled = !toggle.isChecked
+            toggle.isChecked = enabled
+            onChanged(enabled)
+        }
+        return row
+    }
 
     /**
      * A size setting's row: its name and current value on the left, a slider on the
