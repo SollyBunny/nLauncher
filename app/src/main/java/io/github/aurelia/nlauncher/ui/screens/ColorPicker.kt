@@ -12,7 +12,6 @@ import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.drawable.GradientDrawable
 import android.text.Editable
-import android.text.TextWatcher
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -22,8 +21,9 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.EditText
 import android.widget.TextView
 import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.SimpleTextWatcher
+import io.github.aurelia.nlauncher.ui.colorToHex
 import io.github.aurelia.nlauncher.ui.dpToPx
-import java.util.Locale
 
 /**
  * A colour picker shaped like the rest of the settings: the platform alert dialog
@@ -90,40 +90,25 @@ fun showColorPicker(
         update(color)
     }
 
+    fun syncFromHex(): Boolean {
+        val color = parseHex(hexInput.text.toString()) ?: return false
+        Color.colorToHSV(color, hsv)
+        saturationValue.refresh()
+        hueBar.refresh()
+        return true
+    }
+
     hexInput.addTextChangedListener(
-        object : TextWatcher {
-            override fun beforeTextChanged(
-                s: CharSequence?,
-                start: Int,
-                count: Int,
-                after: Int,
-            ) = Unit
-
-            override fun onTextChanged(
-                s: CharSequence?,
-                start: Int,
-                before: Int,
-                count: Int,
-            ) = Unit
-
+        object : SimpleTextWatcher {
             override fun afterTextChanged(s: Editable?) {
-                if (updatingHex) return
-                val color = parseHex(s?.toString().orEmpty()) ?: return
-                Color.colorToHSV(color, hsv)
-                renderPreview(color)
-                saturationValue.refresh()
-                hueBar.refresh()
+                if (!updatingHex && syncFromHex()) renderPreview(Color.HSVToColor(hsv))
             }
         },
     )
 
     hexInput.setOnFocusChangeListener { _, hasFocus ->
         if (!hasFocus) {
-            parseHex(hexInput.text.toString())?.let { color ->
-                Color.colorToHSV(color, hsv)
-                saturationValue.refresh()
-                hueBar.refresh()
-            }
+            syncFromHex()
             // Whether the text was valid or not, put the field back in its canonical
             // form: six opaque digits, so nothing about alpha ever reaches the user.
             update(Color.HSVToColor(hsv))
@@ -412,8 +397,6 @@ class ColorHueView(
 }
 
 private const val OPAQUE = 0xFF000000.toInt()
-
-private fun colorToHex(color: Int): String = String.format(Locale.ROOT, "#%06X", color and 0xFFFFFF)
 
 /**
  * Six digits are the form shown, but eight are accepted too so a value pasted from

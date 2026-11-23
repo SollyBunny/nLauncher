@@ -8,8 +8,6 @@ import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import android.text.Editable
-import android.text.TextWatcher
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -292,14 +290,7 @@ class SearchScreen(
         highlightVisibleLetter()
 
         searchInput.addTextChangedListener(
-            object : TextWatcher {
-                override fun beforeTextChanged(
-                    s: CharSequence?,
-                    start: Int,
-                    count: Int,
-                    after: Int,
-                ) {}
-
+            object : SimpleTextWatcher {
                 override fun onTextChanged(
                     s: CharSequence?,
                     start: Int,
@@ -312,8 +303,6 @@ class SearchScreen(
                     updateLetters()
                     highlightVisibleLetter()
                 }
-
-                override fun afterTextChanged(s: Editable?) {}
             },
         )
 
