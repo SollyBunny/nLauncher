@@ -28,15 +28,13 @@ nLauncher is a simple launcher based on its namesake, [mLauncher](https://github
 
 ```sh
 git clone --depth 1 https://github.com/SollyBunny/nLauncher && cd nLauncher
+./gradlew :app:installDebug # If you have a connected phone in debug mode, otherwise
 ./gradlew :app:assembleDebug
-adb install -r app/build/outputs/apk/debug/*arm64-v8a*.apk
-# adb install -r app/build/outputs/apk/debug/*armeabi-v7a*.apk
-# adb install -r app/build/outputs/apk/debug/*x86_64*.apk
 ```
 
 Useful commands
 
 ```sh
 ./gradlew :app:ktlintFormat
-./gradlew :app:lintDebug
+./gradlew :app:lint
 ```
