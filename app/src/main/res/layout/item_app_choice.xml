@@ -2,6 +2,7 @@
 <TextView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    style="@style/ShadowText"
     android:clickable="true"
     android:focusable="true"
     android:paddingStart="4dp"
@@ -10,8 +11,4 @@
     android:gravity="end|center_vertical"
     android:ellipsize="end"
     android:maxLines="1"
-    android:shadowColor="#99000000"
-    android:shadowDx="1"
-    android:shadowDy="1"
-    android:shadowRadius="3"
     android:textColor="@android:color/white" />

@@ -1,6 +1,5 @@
 package io.github.aurelia.nlauncher.ui
 
-import android.annotation.TargetApi
 import android.content.res.ColorStateList
 import android.content.res.Resources
 import android.graphics.Bitmap
@@ -16,7 +15,6 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.Drawable
-import android.os.Build
 import android.util.AttributeSet
 import android.util.Xml
 import org.xmlpull.v1.XmlPullParser
@@ -251,13 +249,14 @@ class ShadowedIconDrawable private constructor(
     }
 
     // https://stackoverflow.com/questions/65402823/deprecation-of-drawable-getopacity
-    @Suppress("OVERRIDE_DEPRECATION")
-    @TargetApi(Build.VERSION_CODES.Q)
+    // Always safe to answer TRANSLUCENT; this is not a Q-only method, so @TargetApi's
+    // caller-facing requirement was misleading (and lint warns about it).
+    @Suppress("OVERRIDE_DEPRECATION", "UseRequiresApi")
     override fun getOpacity(): Int = PixelFormat.TRANSLUCENT
 
     companion object {
         const val SHADOW_OFFSET = 1f
-        const val SHADOW_COLOR = 0x99000000.toInt()
+        const val SHADOW_COLOR = TEXT_SHADOW_COLOR
 
         /**
          * The text's `setShadowLayer` radius. BlurMaskFilter takes a sigma, not a

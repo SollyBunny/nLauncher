@@ -31,10 +31,15 @@ import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
+import io.github.aurelia.nlauncher.ui.IconPosition
 import io.github.aurelia.nlauncher.ui.Screen
 import io.github.aurelia.nlauncher.ui.ShadowedIconDrawable
+import io.github.aurelia.nlauncher.ui.SimpleTextWatcher
+import io.github.aurelia.nlauncher.ui.bindAppIcon
+import io.github.aurelia.nlauncher.ui.clearAppIcon
 import io.github.aurelia.nlauncher.ui.dpToPx
 import io.github.aurelia.nlauncher.ui.padForSystemBars
+import io.github.aurelia.nlauncher.ui.setLauncherShadow
 import io.github.aurelia.nlauncher.ui.spToPx
 import java.util.Locale
 import kotlin.math.roundToInt
@@ -112,7 +117,7 @@ class SearchScreen(
         val textSp = LauncherConfig.labelTextSp.get(activity)
         searchInput.textSize = textSp
         searchInput.setHintTextColor(faded(textColor, FADED_ALPHA))
-        searchInput.setShadowLayer(3f, 1f, 1f, SHADOW_COLOR)
+        searchInput.setLauncherShadow()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             // The Editor caches the cursor drawable the first time it draws it, so a
             // newly set drawable would never be picked up. Keep one instance and only
@@ -368,7 +373,7 @@ class SearchScreen(
             cellView.text = letter.uppercaseChar().toString()
             cellView.textSize = labelSp
             cellView.gravity = Gravity.CENTER
-            cellView.setShadowLayer(3f, 1f, 1f, SHADOW_COLOR)
+            cellView.setLauncherShadow()
             cellView.setTextColor(unselected)
             cellView.setOnClickListener { jumpTo(letter) }
             cellView.visibility = View.GONE
@@ -582,9 +587,6 @@ class SearchScreen(
 
         /** Search icon size in dp at the default text size; it scales with the text size. */
         private const val SEARCH_ICON_DP = 24f
-
-        /** The shadow the launcher's text carries, reused for the search icon. */
-        private const val SHADOW_COLOR = 0x99000000.toInt()
 
         /** How much of the text color's alpha muted text keeps: the hint and the index. */
         private const val FADED_ALPHA = 0.8f
