@@ -41,11 +41,12 @@ fun launchComponent(
 }
 
 /**
- * Resolve [intent] to the app that would open it, so that favorites are app icons
- * that launch the app itself instead of whatever screen the intent names.
+ * Turn [intent] into a launch of the app that handles it. The launcher cares which
+ * app an intent belongs to, not which screen it names: opening a link to example.com
+ * should launch the browser app, not the activity that handles that URL.
  *
- * Falls back to [intent] when no launchable app handles it, so the favorite is still
- * shown even if all it can do is report that nothing can open it.
+ * Falls back to [intent] when no launchable app handles it, so the caller still has
+ * something to show or launch even if all it can do is report that nothing can open it.
  */
 fun appifyIntent(
     context: Context,
