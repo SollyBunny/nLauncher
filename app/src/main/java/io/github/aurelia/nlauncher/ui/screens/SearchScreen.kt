@@ -109,7 +109,7 @@ class SearchScreen(
     }
 
     private fun applySearchBarAppearance() {
-        val textColor = LauncherConfig.textColor.get(activity)
+        val textColor = LauncherConfig.resolvedTextColor(activity)
         searchInput.setTextColor(textColor)
         val textSp = LauncherConfig.labelTextSp.get(activity)
         searchInput.textSize = textSp
@@ -144,7 +144,7 @@ class SearchScreen(
     }
 
     private fun applyLetterBarAppearance() {
-        val textColor = LauncherConfig.textColor.get(activity)
+        val textColor = LauncherConfig.resolvedTextColor(activity)
         val fadedColor = faded(textColor, FADED_ALPHA)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             letterBar.verticalScrollbarThumbDrawable
@@ -179,7 +179,7 @@ class SearchScreen(
     private fun show() {
         catalog?.let { catalog ->
             val labelSp = LauncherConfig.labelTextSp.get(activity)
-            val textColor = LauncherConfig.textColor.get(activity)
+            val textColor = LauncherConfig.resolvedTextColor(activity)
             if (catalog.revision == renderedRevision &&
                 sortByUsage == renderedUsage &&
                 labelSp == renderedLabelSp &&
@@ -332,7 +332,7 @@ class SearchScreen(
         highlighted = null
         val column = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val labelSp = LauncherConfig.labelTextSp.get(activity)
-        val unselected = faded(LauncherConfig.textColor.get(activity), FADED_ALPHA)
+        val unselected = faded(LauncherConfig.resolvedTextColor(activity), FADED_ALPHA)
 
         val metrics = TextView(activity).apply { textSize = labelSp }.paint.fontMetrics
         val textHeight = metrics.descent - metrics.ascent
@@ -523,7 +523,7 @@ class SearchScreen(
 
             view.text = entry.label
             view.textSize = LauncherConfig.labelTextSp.get(activity)
-            view.setTextColor(LauncherConfig.textColor.get(activity))
+            view.setTextColor(LauncherConfig.resolvedTextColor(activity))
 
             // Configure the compound drawable.
             if (LauncherConfig.iconsShown.get(activity)) {

@@ -23,6 +23,7 @@ import android.widget.TextView
 import io.github.aurelia.nlauncher.R
 import io.github.aurelia.nlauncher.ui.SimpleTextWatcher
 import io.github.aurelia.nlauncher.ui.colorToHex
+import io.github.aurelia.nlauncher.ui.contrastingTextColor
 import io.github.aurelia.nlauncher.ui.dpToPx
 
 /**
@@ -64,7 +65,7 @@ fun showColorPicker(
                 setColor(color)
                 setStroke(1f.dpToPx(context), 0x33FFFFFF)
             }
-        previewText.setTextColor(contrastColor(color))
+        previewText.setTextColor(contrastingTextColor(color))
     }
 
     fun showHex(color: Int) {
@@ -381,13 +382,4 @@ private fun parseHex(text: String): Int? {
     val digits = if (hex.length == 8) hex.takeLast(6) else hex
     if (digits.length != 6) return null
     return digits.toLongOrNull(16)?.let { OPAQUE or it.toInt() }
-}
-
-/** Black or white, whichever is readable on [color]. */
-private fun contrastColor(color: Int): Int {
-    val luminance =
-        0.299f * Color.red(color) / 255f +
-            0.587f * Color.green(color) / 255f +
-            0.114f * Color.blue(color) / 255f
-    return if (luminance > 0.6f) Color.BLACK else Color.WHITE
 }

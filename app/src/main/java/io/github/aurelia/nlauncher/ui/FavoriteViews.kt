@@ -24,7 +24,7 @@ object FavoriteViews {
         view.tag = favorite.key
         view.text = Favorites.label(context, favorite)
         view.textSize = LauncherConfig.labelTextSp.get(context)
-        view.setTextColor(LauncherConfig.textColor.get(context))
+        view.setTextColor(LauncherConfig.resolvedTextColor(context))
 
         if (LauncherConfig.iconsShown.get(context)) {
             view.bindAppIcon(favorite.intent, IconPosition.START)

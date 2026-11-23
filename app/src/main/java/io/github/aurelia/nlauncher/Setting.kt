@@ -81,10 +81,22 @@ class SettingInt(
     ) : this(key, { default }, min, max, step)
 }
 
-class SettingColor(
+/**
+ * A color setting where no stored value means "unset". Removal is used rather than a
+ * sentinel so clearing it is the same as never having picked one.
+ */
+class SettingNullableColor(
     key: String,
-    default: (Context) -> Int,
-) : SettingIntValue(key, default)
+) : Setting<Int?>(key, { null }) {
+    override fun get(context: Context): Int? = preferences(context).let { if (it.contains(key)) it.getInt(key, 0) else null }
+
+    override fun set(
+        context: Context,
+        value: Int?,
+    ) = edit(context) {
+        if (value == null) remove(key) else putInt(key, value)
+    }
+}
 
 class SettingFloat(
     key: String,

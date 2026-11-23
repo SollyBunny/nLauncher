@@ -43,7 +43,7 @@ object WidgetViews {
         onClick: (() -> Unit)? = null,
     ): TextView =
         TextView(activity).apply {
-            setTextColor(LauncherConfig.textColor.get(activity))
+            setTextColor(LauncherConfig.resolvedTextColor(activity))
             setLauncherShadow()
             textSize = LauncherConfig.labelTextSp.get(activity) * scale
             if (bold) typeface = Typeface.DEFAULT_BOLD

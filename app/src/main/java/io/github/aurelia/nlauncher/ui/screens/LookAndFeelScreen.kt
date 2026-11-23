@@ -40,10 +40,7 @@ class LookAndFeelScreen(
     private fun rebuild() {
         rows.removeAllViews()
         rows.addView(sizeRow(R.string.text_size, LauncherConfig.labelTextSp))
-        val textColor = LauncherConfig.textColor.get(activity)
-        rows.addView(
-            settingRow(activity, rows, R.string.text_color, colorToHex(textColor), textColor) { chooseTextColor() },
-        )
+        rows.addView(textColorRow())
         rows.addView(sizeRow(R.string.icon_size, LauncherConfig.iconSizeSp))
         rows.addView(sizeRow(R.string.favorites_gap, LauncherConfig.favoritesGapDp, valueRes = R.string.size_dp))
         rows.addView(sizeRow(R.string.search_gap, LauncherConfig.searchGapDp, valueRes = R.string.size_dp))
@@ -160,8 +157,36 @@ class LookAndFeelScreen(
         return row
     }
 
+    /**
+     * The row shows "adaptive" or the custom hex, with a reset button only once a
+     * custom color exists. Tapping the row opens the picker, which saves on OK alone.
+     */
+    private fun textColorRow(): View {
+        val row = activity.layoutInflater.inflate(R.layout.item_text_color_setting, rows, false)
+        val customColor = LauncherConfig.textColor.get(activity)
+        val value = row.findViewById<TextView>(R.id.text_color_value)
+        val reset = row.findViewById<ImageView>(R.id.text_color_reset)
+
+        if (customColor == null) {
+            value.setText(R.string.text_color_adaptive)
+            value.setTextColor(activity.getColor(R.color.text_secondary))
+        } else {
+            value.text = colorToHex(customColor)
+            value.setTextColor(customColor)
+        }
+        reset.visibility = if (customColor == null) View.GONE else View.VISIBLE
+
+        reset.setOnClickListener {
+            LauncherConfig.textColor.set(activity, null)
+            rebuild()
+        }
+        row.setOnClickListener { chooseTextColor() }
+        return row
+    }
+
     private fun chooseTextColor() {
-        showColorPicker(activity, LauncherConfig.textColor.get(activity)) { color ->
+        val initial = LauncherConfig.textColor.get(activity) ?: LauncherConfig.resolvedTextColor(activity)
+        showColorPicker(activity, initial) { color ->
             LauncherConfig.textColor.set(activity, color)
             rebuild()
         }

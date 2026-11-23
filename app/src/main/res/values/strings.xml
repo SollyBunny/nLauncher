@@ -19,6 +19,7 @@
     <!-- Look and feel -->
     <string name="text_size">Text size</string>
     <string name="text_color">Text color</string>
+    <string name="text_color_adaptive">adaptive</string>
     <string name="icon_size">Icon size</string>
     <string name="favorites_gap">Favorite apps gap</string>
     <string name="search_gap">Search menu gap</string>

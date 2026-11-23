@@ -240,7 +240,7 @@ class HomeScreen(
             LauncherConfig.iconPack.get(activity),
             LauncherConfig.labelTextSp.get(activity),
             LauncherConfig.iconSizeSp.get(activity),
-            LauncherConfig.textColor.get(activity),
+            LauncherConfig.resolvedTextColor(activity),
             LauncherConfig.favoritesGapDp.get(activity),
         ).joinToString("/")
 

@@ -7,6 +7,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.MediaStore
 import android.provider.Settings
+import io.github.aurelia.nlauncher.ui.adaptiveTextColor
 
 /**
  * The launcher activity of the app that would handle [intent], or null when no app
@@ -139,10 +140,13 @@ object LauncherConfig {
         )
 
     /**
-     * The color app labels and widget text are drawn in, or the theme's primary text
-     * color when the user has not picked one.
+     * The custom color app labels and widget text are drawn in, or null to pick black
+     * or white from the wallpaper — see [resolvedTextColor].
      */
-    val textColor = SettingColor("text_color") { it.getColor(R.color.text_primary) }
+    val textColor: Setting<Int?> = SettingNullableColor("text_color")
+
+    /** The color text is actually drawn with: the custom one, or the wallpaper's contrast. */
+    fun resolvedTextColor(context: Context): Int = textColor.get(context) ?: adaptiveTextColor(context)
 
     /** How large app icons are, in sp. Unlike labels, icons do not scale on their own. */
     val iconSizeSp =
