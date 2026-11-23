@@ -27,7 +27,6 @@ import io.github.aurelia.nlauncher.AppCatalog
 import io.github.aurelia.nlauncher.AppCatalogWatcher
 import io.github.aurelia.nlauncher.AppEntry
 import io.github.aurelia.nlauncher.AppUsage
-import io.github.aurelia.nlauncher.Icons
 import io.github.aurelia.nlauncher.LauncherActivity
 import io.github.aurelia.nlauncher.LauncherConfig
 import io.github.aurelia.nlauncher.R
@@ -542,30 +541,10 @@ class SearchScreen(
             view.setTextColor(LauncherConfig.textColor.get(activity))
 
             // Configure the compound drawable.
-            val iconsShown = LauncherConfig.iconsShown.get(activity)
-            val size = LauncherConfig.iconSizeSp.get(activity).spToPx(activity)
-
-            if (iconsShown) {
-                // Empty icon
-                val placeholder =
-                    android.graphics.drawable.ColorDrawable(
-                        android.graphics.Color.TRANSPARENT,
-                    )
-
-                fun setIcon(drawable: Drawable?) {
-                    if (view.tag != entry.key) return
-                    val icon = ShadowedIconDrawable.wrap(drawable) ?: placeholder
-                    icon.setBounds(0, 0, size, size)
-                    view.setCompoundDrawablesRelative(null, null, icon, null)
-                }
-
-                setIcon(
-                    Icons.icon(activity, entry.intent) { loaded ->
-                        setIcon(loaded)
-                    },
-                )
+            if (LauncherConfig.iconsShown.get(activity)) {
+                view.bindAppIcon(entry.intent, IconPosition.END)
             } else {
-                view.setCompoundDrawablesRelative(null, null, null, null)
+                view.clearAppIcon()
             }
 
             view.setOnClickListener {
