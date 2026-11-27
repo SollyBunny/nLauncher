@@ -94,7 +94,7 @@ class SearchScreen(
     init {
         AppCatalogWatcher.watchAppCatalog {
             catalog = it
-            if (active) show()
+            if (active) show() else build(it.apps)
         }
 
         // Keep the search bar clear of the status bar and the results clear of the

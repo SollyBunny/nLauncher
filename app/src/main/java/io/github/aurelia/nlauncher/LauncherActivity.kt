@@ -36,15 +36,12 @@ class LauncherActivity : Activity() {
     private lateinit var host: FrameLayout
     private lateinit var stack: UiStack
 
-    // Built on first use: a cold start should not pay for screens nobody asked for.
     private val home by lazy { HomeScreen(this) }
     private val editFavorites by lazy { EditFavoritesScreen(this) }
     private val editWidgets by lazy { EditWidgetsScreen(this) }
     private val settings by lazy { SettingsScreen(this) }
     private val gestures by lazy { GesturesScreen(this) }
     private val lookAndFeel by lazy { LookAndFeelScreen(this) }
-
-    /** One search screen, reused, so opening it again costs nothing to build. */
     private val search by lazy { SearchScreen(this) }
 
     /**
@@ -67,6 +64,8 @@ class LauncherActivity : Activity() {
         AppCatalogWatcher.init(this)
         setContentView(R.layout.activity_launcher)
         host = findViewById(R.id.root)
+        // Preload the search screen
+        search
 
         // What the theme's windowShowWallpaper asks for, stated explicitly because
         // every screen in here sits in this one window: the wallpaper shows through

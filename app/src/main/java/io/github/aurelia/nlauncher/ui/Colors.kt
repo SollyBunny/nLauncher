@@ -4,6 +4,8 @@ import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.widget.TextView
 import java.util.Locale
 
@@ -25,19 +27,39 @@ fun contrastingTextColor(color: Int): Int {
     return if (luminance > 0.6f) Color.BLACK else Color.WHITE
 }
 
+private var adaptiveColor: Int? = null
+private var watchingWallpaper = false
+
 /**
  * Adaptive text: white over a dark wallpaper, black over a light one, decided by the
  * wallpaper's primary color. WallpaperColors arrived in O_MR1; older versions, and
  * wallpapers that report no colors, keep the launcher's original white text.
+ *
+ * Reading the wallpaper is a binder call, so the answer is kept for every row and
+ * every visitor; the listener below drops it when the wallpaper actually changes.
  */
 fun adaptiveTextColor(context: Context): Int {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-        val primary =
-            WallpaperManager
-                .getInstance(context)
-                .getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
-                ?.primaryColor
-        if (primary != null) return contrastingTextColor(primary.toArgb())
-    }
-    return Color.WHITE
+    watchWallpaper(context)
+    adaptiveColor?.let { return it }
+    val color =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+            val primary =
+                WallpaperManager
+                    .getInstance(context)
+                    .getWallpaperColors(WallpaperManager.FLAG_SYSTEM)
+                    ?.primaryColor
+            primary?.let { contrastingTextColor(it.toArgb()) } ?: Color.WHITE
+        } else {
+            Color.WHITE
+        }
+    adaptiveColor = color
+    return color
+}
+
+private fun watchWallpaper(context: Context) {
+    if (watchingWallpaper || Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) return
+    watchingWallpaper = true
+    WallpaperManager
+        .getInstance(context.applicationContext)
+        .addOnColorsChangedListener({ _, _ -> adaptiveColor = null }, Handler(Looper.getMainLooper()))
 }

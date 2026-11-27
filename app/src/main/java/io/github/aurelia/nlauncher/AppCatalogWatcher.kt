@@ -28,31 +28,32 @@ data class AppCatalog(
  * Keeps an up-to-date catalog of launchable apps
  */
 object AppCatalogWatcher {
-    /** The package query never races itself: one background thread does all of it. */
     private val resolver =
         Executors.newSingleThreadExecutor { task ->
             Thread(task, "apps").apply { isDaemon = true }
         }
     private val main = Handler(Looper.getMainLooper())
     private var resolving: Boolean = false
+    private var watching = false
 
     private var cached: AppCatalog? = null
     private val callbacks = mutableSetOf<(AppCatalog) -> Unit>()
 
     fun init(context: Context) {
-        // Resolve now to prevent wait when searching
-        resolve(context)
-        PackageWatcher.onPackagesChanged(context) {
-            resolve(context)
+        if (!watching) {
+            watching = true
+            PackageWatcher.onPackagesChanged(context) {
+                resolve(context)
+            }
         }
+        val current = cached
+        if (current == null || current.revision != PackageWatcher.revision) resolve(context)
     }
 
     fun watchAppCatalog(callback: (AppCatalog) -> Unit) {
         callbacks += callback
         cached?.let(callback)
     }
-
-    // ---- Resolving -------------------------------------------------------
 
     private fun resolve(context: Context) {
         if (resolving) return
