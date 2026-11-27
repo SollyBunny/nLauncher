@@ -14,25 +14,25 @@ nLauncher is a simple launcher based on its namesake, [mLauncher](https://github
 
 ## Features
 
-- Simple home screen with rearrangeable fav apps and widgets
-- Gestures, basic theme customization
-- Support for icon packs
-- Search sorts by recently opened apps
-- As lightweight as possible
+* Simple home screen with rearrangeable fav apps and widgets
+* Gestures, basic theme customization
+* Support for icon packs
+* Search sorts by recently opened apps
+* As lightweight as possible
 
-## Improvements over [mLauncher](https://github.com/CodeWorksCreativeHub/mLauncher).
+## Improvements mLauncher.
 
-- Consistent and minimal UI
-- Search screen opens instantly by loading apps eagerly
-- Intuitive and representative reordering UI for fav apps and widgets
-- A much cleaner codebase with less random features (some unused)
+* Consistent and minimal UI
+* Search screen opens instantly by loading apps eagerly
+* Intuitive and representative reordering UI for fav apps and widgets
+* A much cleaner codebase with less random features
 
 ## TODO
 
-- Support for adding custom intents (PWAs)
-- Renaming apps
-- Add more widgets and add configuration for them
-- Onboarding UI
+* Support for adding custom intents (PWAs)
+* Renaming apps
+* Add more widgets and add configuration for them
+* Onboarding UI
 
 ## Developing
 
